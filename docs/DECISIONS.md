@@ -113,15 +113,28 @@ Last reviewed: 2026-11-06
 - **Conflict rule:** Multiple rules with the same complete match produce `Pricing Conflict`; the application must not choose automatically.
 - **Reason:** Keep pricing explicit and prevent partial or implicit matches from hiding missing contract data.
 
+### DEC-016 - Folio amount tolerance
+
+- **Status:** Approved; implemented
+- **Decision:** Compare Folio and Group Report amounts using integer minor units. A difference of `0.01` or less in `ILS` or `USD` is treated as `Matched`; a difference greater than `0.01` remains an amount warning and is not a Final-export blocker.
+- **Reason:** Avoid false discrepancies from one minor currency unit while preserving visibility of larger differences.
+- **Evidence:** `src/domain/folio/compareFolio.ts` and `src/domain/folio/compareFolio.test.ts`.
+
+### DEC-017 - Folio warning acknowledgment before Final Export
+
+- **Status:** Approved; acknowledgment implemented, Final Export not implemented
+- **Decision:** Folio warnings do not block Draft work, but Final Export must require an explicit user acknowledgment. The acknowledgment records the Folio file hash and timestamp and does not alter source amounts or mark them as correct.
+- **Evidence:** `FolioWarningAcknowledgement`, `FolioComparisonPanel`, and `finalExportValidation.ts`.
+
 ## Proposed decisions
 
 No additional proposed decision is being recorded in this file. New recommendations must be approved before they become decisions.
 
 ## Unresolved decisions
 
-### DEC-U002 - Folio tolerance and export blocking
+### DEC-U002 - Final Export acknowledgment UI and export implementation
 
-Define tolerance, comparison statuses, acknowledgment behavior, and which discrepancies block Final export.
+Connect the approved Final Export gate to the future export action and define the final acknowledgment presentation. Numeric tolerance is defined by DEC-016, and acknowledgment behavior is defined by DEC-017.
 
 ### DEC-U004 - Persistence schema and storage limits
 

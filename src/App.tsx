@@ -13,9 +13,13 @@ import type { ConflictField } from './domain/reports/roomOccupancy';
 import { applyRoomCorrections, type RoomCorrection } from './domain/reports/roomCorrections';
 import { matchPricingRule, type PricingRule } from './domain/pricing/pricingRules';
 import { calculateFinancialSummary } from './domain/pricing/financialSummary';
+import { validateFinancialSummary } from './domain/pricing/financialValidation';
 import PricingRulesPanel from './components/PricingRulesPanel';
+import FolioComparisonPanel from './components/FolioComparisonPanel';
+import type { GroupRoomForFolioComparison } from './domain/folio/models';
 import { hashArrayBuffer } from './infrastructure/files/hashArrayBuffer';
 import { loadWorkspaceSnapshot, saveWorkspaceSnapshot } from './infrastructure/storage/workspaceStore';
+import type { FolioWarningAcknowledgement } from './infrastructure/storage/workspaceStore';
 
 type View = 'home' | 'workspace';
 type UploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
@@ -41,6 +45,7 @@ function App() {
   const [corrections, setCorrections] = useState<RoomCorrection[]>([]);
   const [correctionHistory, setCorrectionHistory] = useState<RoomCorrection[]>([]);
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [folioWarningAcknowledgement, setFolioWarningAcknowledgement] = useState<FolioWarningAcknowledgement | null>(null);
   const coverage = summarizeReportCoverage(reports);
   const selectedRangeInvalid = Boolean(
     project?.dateRange.start && project.dateRange.end && project.dateRange.start > project.dateRange.end,
@@ -79,14 +84,28 @@ function App() {
   const financialSummary = project?.selectedGroupName
     ? calculateFinancialSummary(selectedPricingDays, pricingRules)
     : null;
+  const financialValidation = financialSummary ? validateFinancialSummary(financialSummary) : null;
+  const selectedFolioGroupRooms: GroupRoomForFolioComparison[] = project?.selectedGroupName
+    ? analyses.flatMap((report) => report.groups
+      .filter((group) => groupMatchKey(group.groupName) === groupMatchKey(project.selectedGroupName ?? ''))
+      .flatMap((group) => applyRoomCorrections(
+        group.rooms,
+        corrections.filter((correction) => correction.reportId === group.reportId),
+      ).map((room) => ({
+        reportDate: report.reportDate as GroupRoomForFolioComparison['reportDate'],
+        roomNumber: room.roomNumber,
+        guestName: room.guestName,
+        reportedRate: room.reportedRate,
+      }))))
+    : [];
   useEffect(() => {
     if (!project) {
       return;
     }
 
-    void saveWorkspaceSnapshot({ project, reports, analyses, analysis, corrections, correctionHistory, pricingRules })
+    void saveWorkspaceSnapshot({ project, reports, analyses, analysis, corrections, correctionHistory, pricingRules, folioWarningAcknowledgement })
       .catch(() => setError('Could not save the workspace locally.'));
-  }, [analysis, analyses, project, reports, corrections, correctionHistory, pricingRules]);
+  }, [analysis, analyses, project, reports, corrections, correctionHistory, pricingRules, folioWarningAcknowledgement]);
   function updateReportState(
     nextReports: ActiveReportDocument[],
     nextAnalyses: AnalyzedGroupReport[],
@@ -241,6 +260,7 @@ function App() {
     setCorrections([]);
     setCorrectionHistory([]);
     setPricingRules([]);
+    setFolioWarningAcknowledgement(null);
     setProject(createProject({
       id: `project-${Date.now()}`,
       name: 'Untitled Project',
@@ -269,6 +289,7 @@ function App() {
       setCorrections(snapshot.corrections ?? []);
       setCorrectionHistory(snapshot.correctionHistory ?? []);
       setPricingRules(snapshot.pricingRules ?? []);
+      setFolioWarningAcknowledgement(snapshot.folioWarningAcknowledgement ?? null);
       setReportMessage('Saved project restored.');
     } catch {
       setError('Could not load the saved workspace from this device.');
@@ -441,6 +462,14 @@ function App() {
                 rules={pricingRules}
                 onRulesChange={setPricingRules}
               />
+              <FolioComparisonPanel
+                groupRooms={selectedFolioGroupRooms}
+                warningAcknowledgement={folioWarningAcknowledgement}
+                onFolioLoaded={(fileHash) => setFolioWarningAcknowledgement({ folioFileHash: fileHash, acknowledgedAt: '' })}
+                onWarningAcknowledged={() => setFolioWarningAcknowledgement((current) => current
+                  ? { ...current, acknowledgedAt: new Date().toISOString() }
+                  : current)}
+              />
               {roomNightSummary && (
                 <section className="room-night-summary" aria-labelledby="room-night-title">
                   <h3 id="room-night-title">Room-Nights: {roomNightSummary.totalRoomNights}</h3>
@@ -538,13 +567,37 @@ function App() {
                 </section>
               )}
               {financialSummary && (
-                <section className="financial-summary" aria-labelledby="financial-summary-title">
-                  <h3 id="financial-summary-title">Financial Summary</h3>
+                <>
+                  <section
+                    className={`financial-validation ${financialValidation?.canFinalize ? 'ready' : 'blocked'}`}
+                    aria-labelledby="financial-validation-title"
+                  >
+                    <h3 id="financial-validation-title">Financial Validation</h3>
+                    <p role="status">
+                      {financialValidation?.canFinalize
+                        ? 'Ready for final processing.'
+                        : 'Final processing is blocked until the listed issues are resolved.'}
+                    </p>
+                    {!financialValidation?.canFinalize && (
+                      <ul>
+                        {financialValidation?.issues.map((issue) => (
+                          <li key={issue.kind}>
+                            {issue.kind === 'room-conflict' && `${issue.count} unresolved room conflict(s)`}
+                            {issue.kind === 'pricing-conflict' && `${issue.count} pricing conflict(s)`}
+                            {issue.kind === 'missing-price' && `${issue.count} missing or invalid price(s)`}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                  <section className="financial-summary" aria-labelledby="financial-summary-title">
+                    <h3 id="financial-summary-title">Financial Summary</h3>
                   <div className="financial-totals">
                     <span><strong>ILS</strong> {financialSummary.totals.ILS}</span>
                     <span><strong>USD</strong> {financialSummary.totals.USD}</span>
                   </div>
-                </section>
+                  </section>
+                </>
               )}
             </section>
           )}

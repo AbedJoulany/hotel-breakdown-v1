@@ -64,6 +64,10 @@ Daily hotel reports contain room, guest, group, occupancy, room-type, and rate i
 - Non-binding price suggestions derived from numeric `reportedRate` observations in the selected group; suggestions require manual approval and currency selection.
 - Basic matched Room-Night financial summary with separate ILS/USD totals and visible missing-price and conflict counts.
 - Selected-group room details show Booked Room Type, Actual Room Type, Adults/Children occupancy, Reported Price, and Pricing status.
+- Folio PDF parsing for the inspected layouts, separate ILS/USD totals, and room/guest comparison across report dates.
+- Group-night aggregation for the same room and guest, with Folio amount warnings using the approved `0.01` tolerance.
+- Folio warning acknowledgment state persisted with the Folio file hash and timestamp.
+- Pure Final Export validation gate combining financial blockers and unacknowledged Folio warnings; no export action is connected yet.
 
 ### Explicit exclusions for the current implementation slice
 
@@ -91,12 +95,12 @@ Daily hotel reports contain room, guest, group, occupancy, room-type, and rate i
 
 ### Folio, Contract, Preview, Export
 
-These sections are Approved / Planned and are not implemented in the current code:
+Contract, Preview, and Export remain Approved / Planned and are not implemented in the current code. Folio comparison is partially implemented for the inspected layouts:
 
-1. User optionally adds a Folio for comparison only.
-2. User enters contract pricing.
-3. User reviews calculated results, warnings, and unresolved issues.
-4. User exports a Draft or Final workbook when validation allows it.
+1. User optionally adds a Folio for comparison only. **Implemented for inspected Folio layouts.**
+2. User enters contract pricing. **Partially implemented through Pricing Rules.**
+3. User reviews calculated results, warnings, and unresolved issues. **Partially implemented.**
+4. User exports a Draft or Final workbook when validation allows it. **Planned.**
 
 ## Inputs and outputs
 
@@ -119,12 +123,12 @@ These sections are Approved / Planned and are not implemented in the current cod
 - Active report coverage and missing dates for the selected range.
 - Room-Nights for the selected group.
 - Selected-group room details grouped by report date.
+- Folio ILS/USD totals, room/guest comparison, Group Report night totals, and review warnings.
 
 ### Planned output
 
 - Contract charges and separate financial lines.
 - Currency-specific totals.
-- Folio comparison status.
 - Draft/Final Excel workbook.
 - Complete project backup.
 
@@ -232,7 +236,7 @@ Draft export may be available for incomplete projects when a meaningful workbook
 ## Unresolved requirements
 
 - Pricing-rule precedence for overlapping date and occupancy rules.
-- Folio tolerance and blocking/non-blocking discrepancy policy.
+- Final Export acknowledgment UI and export action.
 - Automatic Complimentary discount formula.
 - Storage quota, failure recovery, and backup format.
 - Exact UI workflow for correcting duplicate-room conflicts.
