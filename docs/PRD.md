@@ -51,11 +51,19 @@ Daily hotel reports contain room, guest, group, occupancy, room-type, and rate i
 - Report-date extraction, group detection, room-row normalization, and room-type mapping.
 - Unique-room occupancy summaries and material duplicate-room conflict detection.
 - Multiple Group Report upload with sequential local processing.
+- Per-file upload status and retry for failed files.
 - One active report per embedded `reportDate`, with exact-duplicate ignoring and replacement.
 - Report coverage, editable date range, and missing-date warnings.
 - Group selection across the active report collection.
 - Basic Room-Nights calculation and selected-group room summary.
+- Local IndexedDB snapshot for the current project, active report metadata, and parsed analyses.
+- `Continue Project` restoration from the saved local snapshot.
 - Display of report dates, detected groups, room counts, and conflict warnings.
+- Manual conflict record selection with active corrections and correction history restored from the local snapshot.
+- Manual `Pricing Rules` entry for the single approved rule shape, restored from the local workspace snapshot.
+- Non-binding price suggestions derived from numeric `reportedRate` observations in the selected group; suggestions require manual approval and currency selection.
+- Basic matched Room-Night financial summary with separate ILS/USD totals and visible missing-price and conflict counts.
+- Selected-group room details show Booked Room Type, Actual Room Type, Adults/Children occupancy, Reported Price, and Pricing status.
 
 ### Explicit exclusions for the current implementation slice
 
@@ -153,17 +161,23 @@ These sections are Approved / Planned and are not implemented in the current cod
 
 - Contract prices are rates per room-night.
 - Occupancy counts select pricing rules; they do not multiply the room rate by guest count.
+- V1 uses one pricing rule shape: `Date + Room Type + Occupancy Band` (`reportDate` + `roomType` + `adults` + `children`). Every condition must match.
+- V1 has no `Default Rate` and no user-facing rule-category selector.
+- Multiple matches at the same priority level produce `Pricing Conflict` and are never resolved automatically.
 - Money must use precise decimal arithmetic.
 - Round each room-night amount using `ROUND_HALF_UP` before summing.
+- Rounding uses the supported number of decimal places for the currency; two decimal places must not be assumed for every currency.
+- V1 supports `ILS` and `USD`, both rounded to two decimal places.
 - Preserve currencies separately.
 - Never apply automatic currency conversion.
-- Missing financial values must not silently become zero.
+- Missing financial values produce `Missing Price` and must not silently become zero.
+- V1 does not use a `Default Rate`; no matching rule remains `Missing Price`.
 
 ### Complimentary, charges, and Folio
 
 - Complimentary is a separate discount line and does not delete room-nights.
 - V1 allows manual complimentary entitlement and discount confirmation.
-- No automatic complimentary formula is approved yet.
+- No automatic Complimentary formula is used; Complimentary remains a manually confirmed discount line.
 - Additional charges are manual and independent from PDF parsing and Folio comparison.
 - Folio is comparison-only and cannot determine contract prices or automatically create charges.
 
@@ -223,3 +237,4 @@ Draft export may be available for incomplete projects when a meaningful workbook
 - Storage quota, failure recovery, and backup format.
 - Exact UI workflow for correcting duplicate-room conflicts.
 - Excel template worksheet and cell mapping.
+
