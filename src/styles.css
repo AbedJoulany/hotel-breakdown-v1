@@ -57,6 +57,50 @@ button:hover {
   padding: clamp(1.5rem, 4vw, 3rem);
 }
 
+.screen-navigation {
+  align-items: center;
+  border-bottom: 1px solid #e4ddce;
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 0.75rem;
+}
+
+.screen-navigation .text-button {
+  padding-bottom: 0.45rem;
+  padding-top: 0.45rem;
+}
+
+.screen-navigation .text-button.active {
+  color: #294f45;
+  box-shadow: inset 0 -2px 0 #294f45;
+}
+
+.folio-screen {
+  display: grid;
+  gap: 1rem;
+}
+
+.folio-screen[hidden],
+.workspace-content[hidden] {
+  display: none;
+}
+
+.folio-screen-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.folio-screen-heading h1 {
+  font-size: clamp(2.2rem, 6vw, 4rem);
+}
+
+.folio-screen-heading .project-name {
+  margin-bottom: 0;
+}
+
 .eyebrow {
   color: #8b5e34;
   font-size: 0.75rem;
@@ -887,6 +931,16 @@ h1 {
 
   .workspace-card {
     padding: 1.25rem;
+  }
+
+  .screen-navigation,
+  .folio-screen-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .screen-navigation {
+    gap: 0.25rem;
   }
 
   .action-grid {

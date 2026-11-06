@@ -21,7 +21,7 @@ import { hashArrayBuffer } from './infrastructure/files/hashArrayBuffer';
 import { loadWorkspaceSnapshot, saveWorkspaceSnapshot } from './infrastructure/storage/workspaceStore';
 import type { FolioWarningAcknowledgement } from './infrastructure/storage/workspaceStore';
 
-type View = 'home' | 'workspace';
+type View = 'home' | 'workspace' | 'folio';
 type UploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 interface UploadItem {
@@ -327,14 +327,36 @@ function App() {
     setCorrectionHistory((current) => [...current, correction]);
   }
 
-  if (view === 'workspace') {
+  if (view === 'workspace' || view === 'folio') {
     return (
       <main className="app-shell">
-        <section className="workspace-card" aria-labelledby="workspace-title">
-          <p className="eyebrow">Hotel Breakdown V1</p>
-          <h1 id="workspace-title">Project workspace</h1>
-          {project && <p className="project-name">Project: {project.name}</p>}
-          <p className="muted">Upload a daily group report to inspect its detected groups.</p>
+        <section
+          className="workspace-card"
+          aria-labelledby={view === 'folio' ? 'folio-screen-title' : 'workspace-title'}
+        >
+          <nav className="screen-navigation" aria-label="Project screens">
+            <button
+              className={`text-button${view === 'workspace' ? ' active' : ''}`}
+              type="button"
+              aria-current={view === 'workspace' ? 'page' : undefined}
+              onClick={() => setView('workspace')}
+            >
+              Workspace
+            </button>
+            <button
+              className={`text-button${view === 'folio' ? ' active' : ''}`}
+              type="button"
+              aria-current={view === 'folio' ? 'page' : undefined}
+              onClick={() => setView('folio')}
+            >
+              Folio Comparison
+            </button>
+          </nav>
+          <div className="workspace-content" hidden={view === 'folio'}>
+            <p className="eyebrow">Hotel Breakdown V1</p>
+            <h1 id="workspace-title">Project workspace</h1>
+            {project && <p className="project-name">Project: {project.name}</p>}
+            <p className="muted">Upload a daily group report to inspect its detected groups.</p>
           <label className="upload-box">
             <span>Group report PDF</span>
             <input
@@ -461,14 +483,6 @@ function App() {
                 selectedGroupName={project?.selectedGroupName ?? null}
                 rules={pricingRules}
                 onRulesChange={setPricingRules}
-              />
-              <FolioComparisonPanel
-                groupRooms={selectedFolioGroupRooms}
-                warningAcknowledgement={folioWarningAcknowledgement}
-                onFolioLoaded={(fileHash) => setFolioWarningAcknowledgement({ folioFileHash: fileHash, acknowledgedAt: '' })}
-                onWarningAcknowledged={() => setFolioWarningAcknowledgement((current) => current
-                  ? { ...current, acknowledgedAt: new Date().toISOString() }
-                  : current)}
               />
               {roomNightSummary && (
                 <section className="room-night-summary" aria-labelledby="room-night-title">
@@ -604,6 +618,26 @@ function App() {
           <button className="text-button" onClick={() => setView('home')}>
             Back to home
           </button>
+          </div>
+          <section className="folio-screen" hidden={view !== 'folio'} aria-labelledby="folio-screen-title">
+            <div className="folio-screen-heading">
+              <div>
+                <p className="eyebrow">Project workspace</p>
+                <h1 id="folio-screen-title">Folio Comparison</h1>
+              </div>
+              <button className="text-button" type="button" onClick={() => setView('workspace')}>
+                Back to Workspace
+              </button>
+            </div>
+            <FolioComparisonPanel
+              groupRooms={selectedFolioGroupRooms}
+              warningAcknowledgement={folioWarningAcknowledgement}
+              onFolioLoaded={(fileHash) => setFolioWarningAcknowledgement({ folioFileHash: fileHash, acknowledgedAt: '' })}
+              onWarningAcknowledged={() => setFolioWarningAcknowledgement((current) => current
+                ? { ...current, acknowledgedAt: new Date().toISOString() }
+                : current)}
+            />
+          </section>
         </section>
       </main>
     );

@@ -60,7 +60,7 @@ The parser is based on inspected Oracle Reports layouts. It is not a generic PDF
 Implemented UI behavior in `src/App.tsx`:
 
 - Home actions for `New Project` and `Continue Project`.
-- Initial Workspace view.
+- Initial Workspace view and a separate `Folio Comparison` view selected through the existing `View` state; no routing library is used.
 - Local single or multiple PDF selection.
 - In-memory active report collection with one report per embedded date.
 - Display of report dates, detected groups, unique room counts, and conflict warnings.
@@ -71,6 +71,7 @@ Implemented UI behavior in `src/App.tsx`:
 - Selected-group room table with Booked/Actual Room Type, Adults/Children occupancy, Reported Price, and Pricing status.
 - Compact Financial Summary with separate ILS and USD totals.
 - Folio upload, separate ILS/USD totals, and room-level comparison statuses for the selected group.
+- Workspace-to-Folio navigation reuses the active project state and keeps the mounted `FolioComparisonPanel` instance while switching views.
 - Pricing-rule entry and selected-group report-rate suggestions at the UI boundary; active rules are included in the local snapshot, and the domain matcher returns `Matched`, `Pricing Conflict`, or `Missing Price` without calculating money.
 - IndexedDB snapshot persistence for project state, active report metadata, parsed analyses, active corrections, and correction history.
 - `Continue Project` restoration from the local workspace snapshot.
