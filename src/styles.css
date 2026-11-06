@@ -114,6 +114,79 @@ h1 {
   margin: 0.75rem 0;
 }
 
+.upload-status {
+  margin-top: 1rem;
+}
+
+.upload-status h2 {
+  color: #493b2b;
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+.upload-status-list {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.upload-status-row {
+  align-items: center;
+  background: #fcfaf4;
+  border: 1px solid #e4ddce;
+  border-radius: 0.75rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.7rem 0.85rem;
+}
+
+.upload-status-row > div:first-child {
+  min-width: 0;
+}
+
+.upload-status-row strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-status-row .error-message {
+  margin: 0.25rem 0 0;
+}
+
+.upload-status-actions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.upload-status-label {
+  color: #6c665c;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.upload-status-row.completed {
+  border-color: #cfe2d5;
+}
+
+.upload-status-row.failed {
+  border-color: #e4b9aa;
+}
+
+.retry-button {
+  background: #eadfca;
+  color: #493b2b;
+  font-size: 0.75rem;
+  padding: 0.45rem 0.7rem;
+}
+
 .report-message {
   color: #2f6657;
 }
@@ -284,6 +357,324 @@ h1 {
   color: #2f6657;
 }
 
+.room-detail-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr));
+  align-items: center;
+  border-top: 1px solid #d8e8dc;
+  gap: 0.35rem 0.75rem;
+  padding-top: 0.35rem;
+}
+
+.room-detail-header {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr));
+  gap: 0.35rem 0.75rem;
+  color: #493b2b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding-bottom: 0.2rem;
+}
+
+.room-detail-list > .room-detail-header {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.room-detail-header span,
+.room-detail-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pricing-status {
+  font-size: 0.75rem;
+}
+
+.pricing-status.matched {
+  color: #2f6657;
+}
+
+.pricing-status.missing-price,
+.pricing-status.pricing-conflict {
+  color: #a0442c;
+}
+
+.pricing-panel {
+  background: #fffaf0;
+  border: 1px solid #e4ddce;
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+}
+
+.pricing-panel-heading,
+.pricing-suggestions-heading,
+.pricing-rule-row,
+.pricing-suggestion-row {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.pricing-panel h3 {
+  color: #493b2b;
+  margin: 0;
+}
+
+.pricing-form {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.pricing-entry-card {
+  background: #fff;
+  border: 1px solid #e4ddce;
+  border-radius: 0.8rem;
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.8rem;
+}
+
+.pricing-entry-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+}
+
+.pricing-entry-heading span {
+  color: #8a8175;
+  font-size: 0.78rem;
+}
+
+.pricing-form label span {
+  color: #493b2b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.pricing-form label,
+.pricing-suggestions-heading label {
+  color: #493b2b;
+  display: grid;
+  font-size: 0.78rem;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.pricing-form input,
+.pricing-form select,
+.pricing-suggestions-heading select {
+  background: #fffdf8;
+  border: 1px solid #d2c6b2;
+  border-radius: 0.5rem;
+  color: #493b2b;
+  font: inherit;
+  min-height: 2.35rem;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  width: 100%;
+}
+
+.pricing-add-button {
+  justify-self: start;
+  min-height: 2.35rem;
+  margin-top: 0.25rem;
+  padding: 0.4rem 0.65rem;
+  white-space: nowrap;
+}
+
+.pricing-rule-list,
+.pricing-suggestions {
+  border-top: 1px solid #e4ddce;
+  display: grid;
+  gap: 0.45rem;
+  padding-top: 0.75rem;
+}
+
+.pricing-rule-row,
+.pricing-suggestion-row {
+  background: #fff;
+  border: 1px solid #e4ddce;
+  border-radius: 0.6rem;
+  font-size: 0.8rem;
+  padding: 0.45rem 0.6rem;
+}
+
+.pricing-suggestion-row {
+  align-items: center;
+}
+
+.pricing-rule-row > span,
+.pricing-suggestion-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.financial-summary {
+  background: #f7f1e5;
+  border: 1px solid #d8c7a9;
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+}
+
+.financial-summary-heading {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.financial-summary h3 {
+  color: #493b2b;
+  margin: 0;
+}
+
+.financial-summary-heading > span {
+  color: #6c665c;
+  font-size: 0.8rem;
+}
+
+.financial-totals {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.financial-totals span {
+  background: #fffdf8;
+  border: 1px solid #e4ddce;
+  border-radius: 0.65rem;
+  color: #2f6657;
+  font-size: 1.05rem;
+  padding: 0.7rem;
+}
+
+.financial-totals strong {
+  color: #493b2b;
+  font-size: 0.75rem;
+  margin-right: 0.35rem;
+}
+
+.financial-warnings {
+  color: #a0442c;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  gap: 0.5rem 1rem;
+}
+
+@media (max-width: 620px) {
+  .room-detail-header,
+  .room-detail-row {
+    gap: 0.25rem;
+    grid-template-columns: minmax(0, 1.5fr) repeat(5, minmax(3rem, 1fr));
+  }
+
+  .pricing-form {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-entry-heading,
+  .pricing-panel-heading,
+  .pricing-suggestions-heading,
+  .pricing-rule-row,
+  .pricing-suggestion-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .financial-summary-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (min-width: 621px) and (max-width: 980px) {
+  .pricing-form {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.conflict-detail-list {
+  border-top: 1px solid #e8c8bd;
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+}
+
+.conflict-detail-list > strong,
+.conflict-detail > strong {
+  color: #8a3e2b;
+  font-size: 0.85rem;
+}
+
+.conflict-detail {
+  background: #fff8f5;
+  border: 1px solid #e8c8bd;
+  border-radius: 0.65rem;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.65rem;
+}
+
+.conflict-detail span,
+.conflict-detail li {
+  color: #6c665c;
+  font-size: 0.8rem;
+}
+
+.conflict-detail ul {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.correction-button {
+  background: #fff;
+  border: 1px solid #b98270;
+  border-radius: 999px;
+  color: #8a3e2b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.5rem;
+}
+
+.correction-button.selected {
+  background: #8a3e2b;
+  color: #fff;
+}
+
+.correction-status {
+  color: #2f6657;
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.correction-history {
+  border-top: 1px dashed #d8b2a5;
+  color: #7a655c;
+  display: grid;
+  font-size: 0.72rem;
+  gap: 0.15rem;
+  margin: 0.35rem 0 0;
+  padding: 0.35rem 0 0 1.2rem;
+}
+
 .action-grid {
   display: grid;
   gap: 0.75rem;
@@ -319,4 +710,15 @@ h1 {
   .action-grid {
     grid-template-columns: 1fr;
   }
+
+  .upload-status-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .upload-status-actions {
+    justify-content: space-between;
+  }
 }
+

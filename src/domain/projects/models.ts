@@ -12,3 +12,4 @@ export interface Project {
     end: IsoDate | null;
   };
 }
+

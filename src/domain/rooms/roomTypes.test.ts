@@ -19,3 +19,4 @@ describe('ROOM_TYPES', () => {
     expect(findRoomType('UNKNOWN')).toBeUndefined();
   });
 });
+

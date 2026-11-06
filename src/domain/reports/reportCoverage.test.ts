@@ -35,3 +35,4 @@ describe('summarizeReportCoverage', () => {
     )).toEqual(['2026-10-25', '2026-10-27']);
   });
 });
+

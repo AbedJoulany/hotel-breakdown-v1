@@ -8,3 +8,4 @@ export async function hashArrayBuffer(data: ArrayBuffer): Promise<string> {
 
   return `length-${data.byteLength}`;
 }
+

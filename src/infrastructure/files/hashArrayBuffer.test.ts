@@ -9,3 +9,4 @@ describe('hashArrayBuffer', () => {
     expect(await hashArrayBuffer(data)).toBe(await hashArrayBuffer(data));
   });
 });
+

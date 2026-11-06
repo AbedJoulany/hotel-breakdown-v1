@@ -1,5 +1,6 @@
 import type { ActiveReportDocument, DailyGroupSnapshot } from './models';
 import { summarizeRoomOccupancy } from './roomOccupancy';
+import { groupMatchKey } from './groupMatch';
 import type { IsoDate } from '../shared/types';
 
 export interface DailyRoomNightSummary {
@@ -20,7 +21,8 @@ export function calculateGroupRoomNights(
 ): GroupRoomNightSummary {
   const days = reports
     .flatMap((report) => {
-      const group = report.groupSnapshots.find((snapshot) => snapshot.groupName === groupName);
+      const selectedGroupKey = groupMatchKey(groupName);
+      const group = report.groupSnapshots.find((snapshot) => groupMatchKey(snapshot.groupName) === selectedGroupKey);
       return group ? [summarizeGroupDay(report.reportDate, group)] : [];
     })
     .sort((a, b) => a.reportDate.localeCompare(b.reportDate));
@@ -43,3 +45,4 @@ function summarizeGroupDay(
     roomNights: occupancy.occupiedRoomCount,
   };
 }
+
