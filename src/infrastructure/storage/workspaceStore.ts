@@ -4,6 +4,11 @@ import type { ActiveReportDocument } from '../../domain/reports/models';
 import type { RoomCorrection } from '../../domain/reports/roomCorrections';
 import type { PricingRule } from '../../domain/pricing/pricingRules';
 
+export interface FolioWarningAcknowledgement {
+  folioFileHash: string;
+  acknowledgedAt: string;
+}
+
 const DATABASE_NAME = 'hotel-breakdown-v1';
 const DATABASE_VERSION = 1;
 const STORE_NAME = 'workspace';
@@ -17,6 +22,7 @@ export interface WorkspaceSnapshot {
   corrections: RoomCorrection[];
   correctionHistory: RoomCorrection[];
   pricingRules: PricingRule[];
+  folioWarningAcknowledgement?: FolioWarningAcknowledgement | null;
 }
 
 function openDatabase(): Promise<IDBDatabase> {

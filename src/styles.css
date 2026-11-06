@@ -565,6 +565,177 @@ h1 {
   margin-right: 0.35rem;
 }
 
+.financial-validation {
+  border: 1px solid #e4ddce;
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  padding: 0.8rem;
+}
+
+.financial-validation.ready {
+  background: #f2fbf5;
+  border-color: #b8ddc0;
+}
+
+.financial-validation.blocked {
+  background: #fff8f5;
+  border-color: #e8c8bd;
+}
+
+.financial-validation h3,
+.financial-validation p,
+.financial-validation ul {
+  margin: 0;
+}
+
+.financial-validation h3 {
+  color: #493b2b;
+  font-size: 0.95rem;
+}
+
+.financial-validation p,
+.financial-validation li {
+  color: #6c665c;
+  font-size: 0.85rem;
+}
+
+.financial-validation.blocked p,
+.financial-validation.blocked li {
+  color: #8a3e2b;
+}
+
+.financial-validation ul {
+  padding-left: 1.2rem;
+}
+
+.folio-panel {
+  background: #fbfaf5;
+  border: 1px solid #e4ddce;
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.folio-panel-heading {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.folio-panel-heading h3,
+.folio-panel-heading p {
+  margin: 0;
+}
+
+.folio-upload-box {
+  margin: 0;
+}
+
+.folio-totals {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.folio-totals span {
+  background: #fffdf8;
+  border: 1px solid #e4ddce;
+  border-radius: 0.65rem;
+  color: #2f6657;
+  padding: 0.7rem;
+}
+
+.folio-totals strong {
+  color: #493b2b;
+  font-size: 0.75rem;
+  margin-right: 0.35rem;
+}
+
+.folio-review-note {
+  margin: 0;
+}
+
+.folio-acknowledgement {
+  background: #fffaf0;
+  border: 1px solid #e8cf9f;
+  border-radius: 0.65rem;
+  color: #8a641e;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.7rem;
+}
+
+.folio-acknowledgement.acknowledged {
+  background: #f2fbf5;
+  border-color: #b8ddc0;
+  color: #2f6657;
+}
+
+.folio-acknowledgement label,
+.folio-acknowledgement span {
+  font-size: 0.8rem;
+}
+
+.folio-acknowledgement input {
+  margin-right: 0.4rem;
+}
+
+.folio-comparison-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.folio-comparison-row {
+  align-items: center;
+  background: #fffdf8;
+  border: 1px solid #e4ddce;
+  border-radius: 0.55rem;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: minmax(0, 2fr) repeat(5, minmax(5rem, 0.75fr)) minmax(8rem, 1fr);
+  padding: 0.55rem 0.65rem;
+}
+
+.folio-comparison-header {
+  color: #6c665c;
+  display: grid;
+  font-size: 0.72rem;
+  gap: 0.6rem;
+  grid-template-columns: minmax(0, 2fr) repeat(5, minmax(5rem, 0.75fr)) minmax(8rem, 1fr);
+  padding: 0 0.65rem;
+}
+
+.folio-comparison-row > span,
+.folio-comparison-row > strong {
+  font-size: 0.8rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.folio-comparison-row.matched strong {
+  color: #2f6657;
+}
+
+.folio-comparison-row.missing-in-folio strong,
+.folio-comparison-row.missing-in-group strong,
+.folio-comparison-row.data-missing strong {
+  color: #8a3e2b;
+}
+
+.folio-comparison-row.amount-mismatch {
+  background: #fffaf0;
+  border-color: #e8cf9f;
+}
+
+.folio-comparison-row.amount-mismatch strong {
+  color: #8a641e;
+}
+
 .financial-warnings {
   color: #a0442c;
   display: flex;
@@ -596,6 +767,17 @@ h1 {
   .financial-summary-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .folio-panel-heading,
+  .folio-comparison-row {
+    align-items: stretch;
+    flex-direction: column;
+    grid-template-columns: 1fr;
+  }
+
+  .folio-comparison-header {
+    display: none;
   }
 }
 

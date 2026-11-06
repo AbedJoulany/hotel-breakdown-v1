@@ -12,6 +12,8 @@ Last reviewed: 2026-11-06
 
 ## Current position
 
+The report-processing vertical slice is substantially implemented. Financial rules, Folio comparison for inspected layouts, night aggregation, amount tolerance, warning acknowledgment, and the pure Final Export gate are implemented. Excel export, original-PDF backup, and the connected Final Export action remain future work.
+
 ### Phase 0 - Planning and documentation
 
 **Completed**
@@ -56,6 +58,7 @@ Completed:
 - Group and room-row normalization.
 - Unique-room occupancy summaries.
 - Duplicate-room conflict detection.
+- Financial validation that reports blockers for unresolved room conflicts, pricing conflicts, and missing or invalid prices.
 - Multiple Group Report upload and sequential processing.
 - One active valid report per embedded report date, with duplicate/replacement handling.
 - Report coverage, editable date range, and missing-date warnings.
@@ -78,13 +81,13 @@ Exit condition: `Create Project -> Upload Report -> Select Group -> Calculate Ba
 
 - Add explicit handling for ambiguous group-name collisions without merging uncertain groups silently.
 - Add final correction validation and prevent completion while material conflicts remain unresolved.
-- Prevent final processing when material conflicts remain unresolved.
+- Connect the financial validation gate to the future Final export workflow.
 
 Exit condition: multi-date projects remain traceable and do not silently fabricate or merge source data.
 
 ## Phase 4 - Contract and financial engine
 
-**Planned; dependent on unresolved decisions**
+**In progress**
 
 - Editable pricing table.
 - Room-type pricing.
@@ -94,16 +97,15 @@ Exit condition: multi-date projects remain traceable and do not silently fabrica
 - Complimentary discount line items.
 - Manual additional charges.
 - Separate currency totals.
+- Financial validation and the pure Final Export readiness gate.
 
-Unresolved prerequisites:
-
-- None for the approved V1 currency scope; ILS and USD both use two decimal places.
+Remaining work: connect the approved rules to the export workflow and add planned discounts/additional charges.
 
 Exit condition: deterministic financial calculations have unit tests for rounding, missing rates, overlapping rules, and multiple currencies.
 
 ## Phase 5 - Preview and Folio comparison
 
-**Planned; dependent on Phase 4**
+**In progress**
 
 - Financial summary and drill-down by date, room, and source record.
 - Linked warnings and unresolved-item navigation.
@@ -111,8 +113,10 @@ Exit condition: deterministic financial calculations have unit tests for roundin
 - Currency-safe Folio comparison.
 - Matched, mismatched, not-covered, Folio-only, and unavailable statuses.
 - Explicit discrepancy acknowledgment where allowed.
+- Room/guest night aggregation across report dates.
+- Approved `0.01` amount tolerance and persisted warning acknowledgment.
 
-Unresolved prerequisite: Folio tolerance and blocking/non-blocking discrepancy policy.
+Remaining work: final acknowledgment UI integration and export workflow behavior.
 
 Exit condition: Folio remains comparison-only and cannot silently change contract prices or additional charges.
 

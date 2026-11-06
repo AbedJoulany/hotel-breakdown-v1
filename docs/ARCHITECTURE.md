@@ -33,6 +33,8 @@ Implemented domain modules include:
 - `src/domain/reports/replaceReport.ts`: one-active-report-per-date replacement rules.
 - `src/domain/reports/roomOccupancy.ts`: unique-room counting and duplicate/conflict detection.
 - `src/domain/rooms/roomTypes.ts`: English/Hebrew room-type catalog.
+- `src/domain/folio/models.ts` and `src/domain/folio/compareFolio.ts`: Folio comparison contracts and deterministic room-level comparison without PDF or UI dependencies.
+- `src/domain/pricing/finalExportValidation.ts`: pure gate contract for future Final Export readiness.
 
 Domain code does not import React, PDF.js, or browser storage APIs.
 
@@ -68,6 +70,7 @@ Implemented UI behavior in `src/App.tsx`:
 - Conflict detail review with manual record selection, derived corrected summaries, and correction history.
 - Selected-group room table with Booked/Actual Room Type, Adults/Children occupancy, Reported Price, and Pricing status.
 - Compact Financial Summary with separate ILS and USD totals.
+- Folio upload, separate ILS/USD totals, and room-level comparison statuses for the selected group.
 - Pricing-rule entry and selected-group report-rate suggestions at the UI boundary; active rules are included in the local snapshot, and the domain matcher returns `Matched`, `Pricing Conflict`, or `Missing Price` without calculating money.
 - IndexedDB snapshot persistence for project state, active report metadata, parsed analyses, active corrections, and correction history.
 - `Continue Project` restoration from the local workspace snapshot.
@@ -106,7 +109,7 @@ Implemented invariants:
 - Exact duplicate reports are ignored.
 - An invalid candidate cannot replace a valid active report.
 
-Basic financial calculation is implemented with integer minor units, two-decimal ILS/USD totals, separate currencies, and per-room-night rounding. Final-export blocking, discounts, additional charges, and export validation remain unimplemented. Pricing conflict and Missing Price results are connected to the displayed financial summary.
+Basic financial calculation is implemented with integer minor units, two-decimal ILS/USD totals, separate currencies, and per-room-night rounding. The pure Final Export gate is implemented, while discounts, additional charges, and the export action remain unimplemented. Pricing conflict and Missing Price results are connected to the displayed financial summary. Folio comparison accepts normalized entries, and `src/infrastructure/pdf/parseFolio.ts` maps the inspected layout into those entries plus separate ILS/USD summary totals while excluding account rows; the UI aggregates comparison by room and guest across dates, and the pure Final Export gate combines financial blockers with unacknowledged Folio warnings.
 
 ## Error handling
 
@@ -123,7 +126,7 @@ Implemented:
 Planned:
 
 - Explicit acknowledgment for missing dates.
-- Blocking versus non-blocking validation states for financial export.
+- Final Export UI integration with the pure validation gate.
 
 ## Testing architecture
 
@@ -147,8 +150,8 @@ npm run build
 The following boundaries are planned but not implemented:
 
 - `persistence`: IndexedDB/Dexie adapter and project/report snapshot storage.
-- `financial`: final validation, discounts, additional charges, export blocking, and broader currency support.
-- `folio`: optional Folio extraction and comparison.
+- `financial`: discounts, additional charges, export action, and broader currency support; validation contracts are implemented.
+- `folio`: Folio extraction, totals, room/guest comparison, night aggregation, tolerance, and acknowledgment are implemented for inspected layouts.
 - `export`: ExcelJS Draft and Final workbook generation.
 - `workflow`: project navigation, completion status, acknowledgments, and blocking validation.
 
@@ -182,7 +185,7 @@ Planned but not currently installed or used:
 - The parser is tied to the currently inspected report layouts and needs additional layout validation before broader production use.
 - The current snapshot persistence does not retain original PDF binaries, provide backup/restore, or block completion for unresolved conflicts.
 - Pricing-rule precedence is unresolved.
-- Folio tolerance and blocking policy are unresolved.
+- Final Export action and workbook mapping are not implemented.
 - Complimentary discount formula is unresolved.
 - Backup schema and storage-failure behavior are unresolved.
 - Excel templates have not yet been inspected for export implementation.

@@ -51,7 +51,8 @@ Last reviewed: 2026-11-06
 - Basic room-night totals are calculated for a selected group.
 - Pure pricing-rule contracts and matching results are implemented for one complete `Date + Room Type + Occupancy Band` rule, plus `Pricing Conflict` and `Missing Price`.
 - `Pricing Rules` UI supports manual entry of the single rule shape and displays `Matched`, `Missing Price`, and `Pricing Conflict` statuses.
-- Basic financial summaries calculate matched room-night charges with two-decimal ILS/USD totals; Final export blocking, discounts, and additional charges are not implemented.
+- Basic financial summaries calculate matched room-night charges with two-decimal ILS/USD totals; Final Export action, discounts, and additional charges are not implemented.
+- Financial validation reports unresolved room conflicts, pricing conflicts, and missing or invalid prices as blockers through a pure domain contract; no Final export exists yet.
 - Numeric `reportedRate` observations from the selected group are shown as non-binding price suggestions; the user must choose the currency and add them manually. Active pricing rules are persisted in the local workspace snapshot.
 - Group matching uses a safe comparison key that trims and collapses whitespace and ignores letter case while preserving the original display name.
 
@@ -72,6 +73,17 @@ Last reviewed: 2026-11-06
 - Room-Nights and selected-group room details are displayed in the summary.
 - Selected-group room details show Booked Room Type, Actual Room Type, Adults/Children occupancy, Reported Price, and Pricing status.
 - A compact Financial Summary shows only separate ILS and USD totals.
+- The inspected Folio layout is supported by a pure comparison contract with matched, amount-mismatch, missing-in-folio, missing-in-group, and data-missing statuses.
+- The inspected Folio PDF is parsed into normalized `FolioEntry` records for room transactions and separate `ILS`/`USD` summary totals; account rows are excluded.
+- The UI can upload one Folio PDF for review, display separate ILS/USD totals, and show room-level comparison statuses without changing pricing rules.
+- Folio room comparison is date-aware: the comparison key is `reportDate + roomNumber`, so the same room on different dates remains separate.
+- Folio comparison displays the number of unique Group Report nights for the same room and guest, alongside the number of Folio entries; Folio entries are not treated as nights unless the source states that explicitly.
+- Folio comparison now summarizes one row per room and guest across all selected report dates, summing Group Report nights and amounts before comparing with the Folio amount.
+- Folio amount differences are displayed as review warnings and are not connected to the blocking `Financial Validation` gate.
+- Folio amount comparison uses the approved `0.01` minor-unit tolerance for ILS and USD.
+- The UI records an acknowledgment timestamp and Folio file hash when Folio warnings are reviewed; the connected Final Export action is not implemented.
+- A pure `Final Export` validation contract now combines financial blockers with unacknowledged Folio warnings; no export action is connected yet.
+- `Folio nights` is shown as `Not stated` for the inspected layouts because they do not provide a per-room night quantity; account-level Arrival/Departure is not applied to individual rooms.
 - Multiple-upload results summarize added, replaced, and duplicate files.
 - Failed files do not prevent other selected files from being processed.
 - Per-file upload states are displayed as `pending`, `processing`, `completed`, or `failed`.
@@ -90,8 +102,8 @@ npm run build
 
 Observed result:
 
-- 17 test files passed.
-- 48 tests passed.
+- 21 test files passed.
+- 63 tests passed.
 - Production build passed.
 
 - PDF.js may emit `standardFontDataUrl` warnings during tests; these did not fail the test run.
@@ -100,15 +112,14 @@ Observed result:
 
 The following V1 capabilities are agreed requirements but are not implemented yet:
 
-- Project creation and real Continue Project behavior.
+- Original PDF binary persistence, backup export/import, and storage recovery behavior.
 - Persistence of original PDF binaries, backup export/import, and storage recovery behavior.
 - Independent project report snapshots and saved report collections.
 - Final correction validation and blocking completion while material conflicts remain unresolved.
 - Ambiguous group-name collision detection and user-assisted resolution.
-- Final financial validation and export blocking.
+- Final export action integration using the implemented validation gate.
 - Complimentary discounts and additional charges.
 - Additional currencies beyond ILS/USD and currency conversion.
-- Optional Folio parsing and comparison.
 - Financial Preview and drill-down warnings.
 - Excel Draft and Final export in English and Hebrew.
 - Full project backup and restore.
@@ -122,7 +133,7 @@ These items are recommendations, not completed functionality.
 
 ## Unresolved
 
-- Folio discrepancy tolerance and the complete blocking/non-blocking validation policy.
+- Final Export UI workflow and acknowledgment presentation.
 - Practical browser-storage limits and recovery behavior.
 - The internal structure of the Excel templates; they have not yet been inspected for export implementation.
 - Final persistence schema and backup file format.
@@ -130,5 +141,5 @@ These items are recommendations, not completed functionality.
 
 ## Next proposed task
 
-Add final financial validation and explicit blocking behavior for unresolved room conflicts, pricing conflicts, and missing prices before any future Final export.
+Inspect the supplied Excel templates and define the smallest approved export mapping before implementing Draft or Final export.
 
