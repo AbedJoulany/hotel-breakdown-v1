@@ -65,6 +65,12 @@ Implemented UI behavior in `src/App.tsx`:
 - Group selection across active reports.
 - Editable date range, coverage/missing-date warnings, and basic Room-Nights summary.
 - Selected-group room details grouped by report date.
+- Conflict detail review with manual record selection, derived corrected summaries, and correction history.
+- Selected-group room table with Booked/Actual Room Type, Adults/Children occupancy, Reported Price, and Pricing status.
+- Compact Financial Summary with separate ILS and USD totals.
+- Pricing-rule entry and selected-group report-rate suggestions at the UI boundary; active rules are included in the local snapshot, and the domain matcher returns `Matched`, `Pricing Conflict`, or `Missing Price` without calculating money.
+- IndexedDB snapshot persistence for project state, active report metadata, parsed analyses, active corrections, and correction history.
+- `Continue Project` restoration from the local workspace snapshot.
 - User-visible analysis errors.
 
 The current UI does not yet own a persisted project or a complete workflow state machine.
@@ -94,12 +100,13 @@ Implemented invariants:
 - A room shared by multiple rows is counted once by `roomNumber`.
 - Duplicate room rows remain available for review.
 - Material differences between duplicate rows are reported as conflicts rather than silently resolved.
+- Pricing rules have one pure domain contract matching date, room type, adults, and children together; duplicate matches return `Pricing Conflict`, and absent matches return `Missing Price`.
 - Blank occupancy values remain unknown (`null`).
 - One active valid report is retained per `reportDate`.
 - Exact duplicate reports are ignored.
 - An invalid candidate cannot replace a valid active report.
 
-Planned financial invariants include precise decimal arithmetic, per-room-night rounding, currency separation, and Final-export blocking rules. They are not implemented in the current codebase.
+Basic financial calculation is implemented with integer minor units, two-decimal ILS/USD totals, separate currencies, and per-room-night rounding. Final-export blocking, discounts, additional charges, and export validation remain unimplemented. Pricing conflict and Missing Price results are connected to the displayed financial summary.
 
 ## Error handling
 
@@ -110,11 +117,11 @@ Implemented:
 - PDF analysis errors are caught at the current UI boundary and shown as an error message.
 - Duplicate and material-conflict information is returned as structured data.
 - Multiple selected files are processed sequentially; a failed file does not stop the remaining files.
+- Per-file upload states and retry handling are implemented in the UI boundary.
 - Missing dates are reported for the user-selected date range.
 
 Planned:
 
-- Per-file upload status and retry handling.
 - Explicit acknowledgment for missing dates.
 - Blocking versus non-blocking validation states for financial export.
 
@@ -140,7 +147,7 @@ npm run build
 The following boundaries are planned but not implemented:
 
 - `persistence`: IndexedDB/Dexie adapter and project/report snapshot storage.
-- `financial`: pricing rules, decimal money calculations, discounts, additional charges, and multi-currency totals.
+- `financial`: final validation, discounts, additional charges, export blocking, and broader currency support.
 - `folio`: optional Folio extraction and comparison.
 - `export`: ExcelJS Draft and Final workbook generation.
 - `workflow`: project navigation, completion status, acknowledgments, and blocking validation.
@@ -173,7 +180,7 @@ Planned but not currently installed or used:
 ## Known limitations and unresolved decisions
 
 - The parser is tied to the currently inspected report layouts and needs additional layout validation before broader production use.
-- The project model exists, but project creation, persistence, and resume behavior are not implemented.
+- The current snapshot persistence does not retain original PDF binaries, provide backup/restore, or block completion for unresolved conflicts.
 - Pricing-rule precedence is unresolved.
 - Folio tolerance and blocking policy are unresolved.
 - Complimentary discount formula is unresolved.
@@ -183,3 +190,4 @@ Planned but not currently installed or used:
 ## Architectural change rule
 
 Any change that moves business logic into UI, adds a backend or external transmission, changes the approved technology direction, or changes a financial invariant requires explicit approval and a corresponding entry in `docs/DECISIONS.md`.
+
