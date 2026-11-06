@@ -78,6 +78,35 @@ describe('Home', () => {
     expect(screen.getByLabelText('Group report PDF')).toHaveAttribute('multiple');
   });
 
+  it('opens Folio Comparison as a separate screen and returns without reprocessing reports', async () => {
+    analyzeGroupReportPdf.mockResolvedValue({
+      reportDate: '2026-10-24',
+      groups: [],
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'New Project' }));
+
+    const file = new File(['pdf'], '24.10.26.pdf', { type: 'application/pdf' });
+    Object.defineProperty(file, 'arrayBuffer', { value: async () => new ArrayBuffer(0) });
+    fireEvent.change(screen.getByLabelText('Group report PDF'), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => expect(screen.getByText('1 added · 0 replaced · 0 duplicate')).toBeInTheDocument());
+    expect(analyzeGroupReportPdf).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Folio Comparison' }));
+    expect(screen.getByRole('heading', { name: 'Folio Comparison', level: 1 })).toBeInTheDocument();
+    expect(screen.getByLabelText('Folio PDF')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Project workspace' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Workspace' }));
+    expect(screen.getByRole('heading', { name: 'Project workspace' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Folio Comparison', level: 1 })).not.toBeInTheDocument();
+    expect(screen.getByText('Coverage: 2026-10-24 to 2026-10-24')).toBeInTheDocument();
+    expect(analyzeGroupReportPdf).toHaveBeenCalledTimes(1);
+  });
+
   it('shows analyzed groups after a PDF is selected', async () => {
     analyzeGroupReportPdf.mockResolvedValue({
       reportDate: '2026-10-24',

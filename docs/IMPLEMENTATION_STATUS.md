@@ -17,6 +17,7 @@ Last reviewed: 2026-11-06
 - Vitest with `jsdom` and React Testing Library.
 - Home screen with `New Project` and `Continue Project` actions.
 - Initial Workspace screen.
+- `Folio Comparison` is available as a separate view within the active project, with navigation back to Workspace and preserved in-memory panel state while switching views.
 - Local PDF file selection from the browser.
 - In-memory project state for the current workspace.
 - Multiple Group Report selection and sequential processing.
@@ -103,7 +104,7 @@ npm run build
 Observed result:
 
 - 21 test files passed.
-- 63 tests passed.
+- 64 tests passed.
 - Production build passed.
 
 - PDF.js may emit `standardFontDataUrl` warnings during tests; these did not fail the test run.
