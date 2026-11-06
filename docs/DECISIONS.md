@@ -122,9 +122,9 @@ Last reviewed: 2026-11-06
 
 ### DEC-017 - Folio warning acknowledgment before Final Export
 
-- **Status:** Approved; acknowledgment implemented, Final Export not implemented
-- **Decision:** Folio warnings do not block Draft work, but Final Export must require an explicit user acknowledgment. The acknowledgment records the Folio file hash and timestamp and does not alter source amounts or mark them as correct.
-- **Evidence:** `FolioWarningAcknowledgement`, `FolioComparisonPanel`, and `finalExportValidation.ts`.
+- **Status:** Approved for later implementation; export behavior not implemented
+- **Decision:** Validation must continue detecting financial and Folio warnings, but those warnings must not block either Draft Export or Final Export. When Final Export is implemented, it must download immediately without a confirmation dialog or an additional `Export Anyway` action. Missing values remain missing and must be displayed as warnings rather than replaced with zero. This approved policy does not change the current validation code in the placeholder-screen task.
+- **Evidence:** Approved export workflow decision; current warning detection remains in `finalExportValidation.ts` and current export action is not implemented.
 
 ## Proposed decisions
 
@@ -132,9 +132,9 @@ No additional proposed decision is being recorded in this file. New recommendati
 
 ## Unresolved decisions
 
-### DEC-U002 - Final Export acknowledgment UI and export implementation
+### DEC-U002 - Final Export UI and workbook implementation
 
-Connect the approved Final Export gate to the future export action and define the final acknowledgment presentation. Numeric tolerance is defined by DEC-016, and acknowledgment behavior is defined by DEC-017.
+Implement the approved Draft/Final warning presentation, template selection, workbook generation, and immediate Final Export download. Numeric tolerance is defined by DEC-016. The non-blocking export policy is approved by DEC-017 but is not implemented yet.
 
 ### DEC-U004 - Persistence schema and storage limits
 
@@ -142,7 +142,7 @@ Define the IndexedDB/Dexie schema, browser quota behavior, recovery behavior, an
 
 ### DEC-U005 - Excel template structure
 
-Inspect the supplied English and Hebrew templates when export implementation begins. Do not infer their internal worksheet or cell structure before that phase.
+Finalize the application-to-template field mapping and preserve the approved VAT, currency, missing-value, and fixed-room-row rules during export implementation.
 
 ### DEC-U006 - Duplicate-room correction workflow
 

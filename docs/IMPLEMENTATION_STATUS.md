@@ -18,6 +18,7 @@ Last reviewed: 2026-11-06
 - Home screen with `New Project` and `Continue Project` actions.
 - Initial Workspace screen.
 - `Folio Comparison` is available as a separate view within the active project, with navigation back to Workspace and preserved in-memory panel state while switching views.
+- `Complimentary & Staff`, `Additional Charges`, and `Excel Export` are available as placeholder views within the active project; their calculations and export actions are not implemented.
 - Local PDF file selection from the browser.
 - In-memory project state for the current workspace.
 - Multiple Group Report selection and sequential processing.
@@ -84,6 +85,7 @@ Last reviewed: 2026-11-06
 - Folio amount comparison uses the approved `0.01` minor-unit tolerance for ILS and USD.
 - The UI records an acknowledgment timestamp and Folio file hash when Folio warnings are reviewed; the connected Final Export action is not implemented.
 - A pure `Final Export` validation contract now combines financial blockers with unacknowledged Folio warnings; no export action is connected yet.
+- The approved future export policy is to display validation warnings without blocking Draft or Final downloads; the current validation contract and export behavior have not been changed to implement that policy.
 - `Folio nights` is shown as `Not stated` for the inspected layouts because they do not provide a per-room night quantity; account-level Arrival/Departure is not applied to individual rooms.
 - Multiple-upload results summarize added, replaced, and duplicate files.
 - Failed files do not prevent other selected files from being processed.
@@ -91,6 +93,13 @@ Last reviewed: 2026-11-06
 - Failed files expose a retry action that reprocesses only that file.
 - IndexedDB stores the current project, active report metadata, parsed analyses, active corrections, and correction history locally.
 - `Continue Project` restores the saved workspace state from the same device.
+
+### Excel template inspection
+
+- The supplied templates were inspected read-only; no workbook was modified.
+- `templates/Master $.xlsx` contains three worksheets, with populated content only on `גיליון1`; its visible structure includes project metadata, repeated room-charge blocks, a USD room total, staff/free rows, and ancillary-cost sections.
+- `templates/Master Hebrew.xlsx` contains one populated worksheet, `גיליון`; its visible structure includes room charges, 18% VAT formulas, staff/free rows, ancillary costs, paid-amount adjustment, and final payable totals.
+- The inspection is structural evidence only. Excel export and workbook mapping are not implemented.
 
 ## Verification
 
@@ -123,6 +132,7 @@ The following V1 capabilities are agreed requirements but are not implemented ye
 - Additional currencies beyond ILS/USD and currency conversion.
 - Financial Preview and drill-down warnings.
 - Excel Draft and Final export in English and Hebrew.
+- Approved workbook field mapping for Draft and Final export.
 - Full project backup and restore.
 - PWA offline behavior and stabilization work.
 
@@ -136,11 +146,15 @@ These items are recommendations, not completed functionality.
 
 - Final Export UI workflow and acknowledgment presentation.
 - Practical browser-storage limits and recovery behavior.
-- The internal structure of the Excel templates; they have not yet been inspected for export implementation.
+- The approved application-to-template field mapping and export behavior.
 - Final persistence schema and backup file format.
 - Whether and how duplicate-room conflicts should be corrected in the UI.
+- How selected-group room records and `Date + Room Type + Occupancy Band` prices map into the templates' fixed single/double/staff/free rows and repeated room blocks.
+- Whether exported financial values are before or after VAT, and whether the Hebrew template's hardcoded 18% VAT is applicable to all V1 outputs.
+- How the English template's USD room section and ILS ancillary section should map to separate ILS/USD application totals.
+- The meaning and source of the English template's `PM`, `Agent`, `Free`, `vat staff`, and `paid for transaction` fields.
 
 ## Next proposed task
 
-Inspect the supplied Excel templates and define the smallest approved export mapping before implementing Draft or Final export.
+Approve the smallest Draft export mapping after resolving the template questions above; do not implement Final export until its blocking and VAT behavior are explicitly approved.
 

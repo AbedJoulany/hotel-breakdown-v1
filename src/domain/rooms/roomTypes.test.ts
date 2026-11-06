@@ -11,8 +11,8 @@ describe('ROOM_TYPES', () => {
     });
   });
 
-  it('preserves the intentionally empty Hebrew label for STRC', () => {
-    expect(findRoomType('STRC')?.he).toBe('');
+  it('preserves the approved Hebrew label for STRC', () => {
+    expect(findRoomType('STRC')?.he).toBe('חדר אוריינט עם דלת מקשרת');
   });
 
   it('returns undefined for an unknown code', () => {

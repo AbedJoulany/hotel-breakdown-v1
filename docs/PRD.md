@@ -193,13 +193,13 @@ Contract, Preview, and Export remain Approved / Planned and are not implemented 
 - `Ready with Warnings`
 - `Incomplete`
 
-### Final export blockers
+### Final export warning policy
 
-Final export must be blocked by unresolved financially material conflicts, missing required prices, and other approved blocking issues. Non-blocking warnings may require explicit acknowledgment once their policy is defined.
+**Approved for later implementation; not implemented:** Validation continues to detect unresolved financially material conflicts, missing required prices, and other issues, but these warnings must not block Draft or Final downloads. Missing values remain missing and must not become zero. Final Export must download immediately without a confirmation dialog or an additional `Export Anyway` action.
 
 ### Draft export
 
-Draft export may be available for incomplete projects when a meaningful workbook can be produced. It must be labelled `DRAFT` and must show missing or unresolved information honestly.
+Draft export may be available for incomplete projects when a meaningful workbook can be produced. It must be labelled `DRAFT` and must show missing or unresolved information honestly. This behavior is approved for later implementation and is not currently implemented.
 
 ## Acceptance criteria
 

@@ -61,6 +61,7 @@ Implemented UI behavior in `src/App.tsx`:
 
 - Home actions for `New Project` and `Continue Project`.
 - Initial Workspace view and a separate `Folio Comparison` view selected through the existing `View` state; no routing library is used.
+- Placeholder `Complimentary & Staff`, `Additional Charges`, and `Excel Export` views selected through the same `View` state; they do not own calculations or persistence.
 - Local single or multiple PDF selection.
 - In-memory active report collection with one report per embedded date.
 - Display of report dates, detected groups, unique room counts, and conflict warnings.
@@ -127,7 +128,7 @@ Implemented:
 Planned:
 
 - Explicit acknowledgment for missing dates.
-- Final Export UI integration with the pure validation gate.
+- Final Export UI integration and the approved future non-blocking warning behavior.
 
 ## Testing architecture
 
@@ -155,6 +156,14 @@ The following boundaries are planned but not implemented:
 - `folio`: Folio extraction, totals, room/guest comparison, night aggregation, tolerance, and acknowledgment are implemented for inspected layouts.
 - `export`: ExcelJS Draft and Final workbook generation.
 - `workflow`: project navigation, completion status, acknowledgments, and blocking validation.
+
+### Excel template inspection and proposed mapping
+
+**Implemented:** The supplied templates were inspected without modification. `Master $.xlsx` has one populated sheet (`גיליון1`) plus two empty sheets and contains metadata, repeated room-charge blocks, a USD room total, staff/free rows, and ancillary-cost sections. `Master Hebrew.xlsx` has one populated sheet (`גיליון`) with room totals, hardcoded 18% VAT formulas, staff/free rows, ancillary costs, paid-amount adjustment, and final payable totals.
+
+**Proposed:** Preserve the existing workbook layout and formulas. Populate metadata from the project and selected report range, populate room-charge input rows from the selected group's derived room-night and pricing results, and leave template total formulas intact. Keep ILS and USD values separate and use the language-specific template layout.
+
+**Unresolved:** The templates' fixed single/double/staff/free categories do not map directly to the application's room-type and occupancy records. VAT inclusion, the English template's mixed USD/ILS sections, and manual fields such as `PM`, `Agent`, `Free`, `vat staff`, and `paid for transaction` require explicit approval before export implementation.
 
 These modules must consume domain/application contracts rather than place business rules in React components.
 
@@ -189,7 +198,7 @@ Planned but not currently installed or used:
 - Final Export action and workbook mapping are not implemented.
 - Complimentary discount formula is unresolved.
 - Backup schema and storage-failure behavior are unresolved.
-- Excel templates have not yet been inspected for export implementation.
+- Excel templates have been structurally inspected, but their application field mapping and export behavior remain unresolved.
 
 ## Architectural change rule
 

@@ -12,7 +12,7 @@ Last reviewed: 2026-11-06
 
 ## Current position
 
-The report-processing vertical slice is substantially implemented. Financial rules, Folio comparison for inspected layouts, night aggregation, amount tolerance, warning acknowledgment, and the pure Final Export gate are implemented. Excel export, original-PDF backup, and the connected Final Export action remain future work.
+The report-processing vertical slice is substantially implemented. Financial rules, Folio comparison for inspected layouts, night aggregation, amount tolerance, warning acknowledgment, and the pure Final Export gate are implemented. The supplied Excel templates have been inspected structurally, but Excel export, original-PDF backup, and the connected Final Export action remain future work.
 
 ### Phase 0 - Planning and documentation
 
@@ -115,21 +115,26 @@ Exit condition: deterministic financial calculations have unit tests for roundin
 - Explicit discrepancy acknowledgment where allowed.
 - Room/guest night aggregation across report dates.
 - Approved `0.01` amount tolerance and persisted warning acknowledgment.
+- Placeholder screens for `Complimentary & Staff`, `Additional Charges`, and `Excel Export` with shared project navigation.
 
-Remaining work: final acknowledgment UI integration and export workflow behavior.
+Remaining work: export workflow behavior and the approved future policy that validation warnings remain visible without blocking Draft or Final downloads.
 
 Exit condition: Folio remains comparison-only and cannot silently change contract prices or additional charges.
 
 ## Phase 6 - Excel export
 
-**Planned; dependent on the actual template inspection**
+**In progress; export implementation has not started**
 
-- Inspect `templates/Master $.xlsx` and `templates/Master Hebrew.xlsx`.
+- **Implemented:** inspected `templates/Master $.xlsx` and `templates/Master Hebrew.xlsx` read-only and recorded their worksheets, input areas, formulas, totals, VAT rows, and ancillary sections.
+- **Proposed:** map the application output to the existing template input cells while preserving the template formulas and language-specific layout.
 - Define workbook mapping and output validation.
 - Implement English and Hebrew workbook generation.
 - Implement Draft export.
 - Implement Final export with blocking validation.
+- Implement the approved warning display without blocking Draft or Final downloads.
 - Keep export language independent from currency.
+
+Next proposed task: resolve the open currency, VAT, fixed-row, and manual-field questions, then approve the smallest Draft export mapping.
 
 Exit condition: generated workbooks are validated against approved expected values and do not hide unresolved financial information.
 
