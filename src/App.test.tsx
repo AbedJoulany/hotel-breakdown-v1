@@ -5,6 +5,9 @@ import App from './App';
 const analyzeGroupReportPdf = vi.hoisted(() => vi.fn());
 const loadWorkspaceSnapshot = vi.hoisted(() => vi.fn());
 const saveWorkspaceSnapshot = vi.hoisted(() => vi.fn());
+const extractPdfTextPages = vi.hoisted(() => vi.fn());
+const parseFolio = vi.hoisted(() => vi.fn());
+const hashArrayBuffer = vi.hoisted(() => vi.fn());
 
 vi.mock('./application/reports/analyzeGroupReportPdf', () => ({
   analyzeGroupReportPdf,
@@ -15,6 +18,18 @@ vi.mock('./infrastructure/storage/workspaceStore', () => ({
   saveWorkspaceSnapshot,
 }));
 
+vi.mock('./infrastructure/pdf/pdfTextExtractor', () => ({
+  extractPdfTextPages,
+}));
+
+vi.mock('./infrastructure/pdf/parseFolio', () => ({
+  parseFolio,
+}));
+
+vi.mock('./infrastructure/files/hashArrayBuffer', () => ({
+  hashArrayBuffer,
+}));
+
 afterEach(() => {
   cleanup();
   analyzeGroupReportPdf.mockReset();
@@ -22,6 +37,10 @@ afterEach(() => {
   loadWorkspaceSnapshot.mockResolvedValue(null);
   saveWorkspaceSnapshot.mockReset();
   saveWorkspaceSnapshot.mockResolvedValue(undefined);
+  extractPdfTextPages.mockReset();
+  parseFolio.mockReset();
+  hashArrayBuffer.mockReset();
+  hashArrayBuffer.mockResolvedValue('test-file-hash');
 });
 
 describe('Home', () => {
@@ -104,6 +123,80 @@ describe('Home', () => {
     expect(screen.getByRole('heading', { name: 'Project workspace' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Folio Comparison', level: 1 })).not.toBeInTheDocument();
     expect(screen.getByText('Coverage: 2026-10-24 to 2026-10-24')).toBeInTheDocument();
+    expect(analyzeGroupReportPdf).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves uploaded Folio data across placeholder navigation', async () => {
+    analyzeGroupReportPdf.mockResolvedValue({
+      reportDate: '2026-10-24',
+      groups: [{
+        reportId: 'report-folio',
+        reportDate: '2026-10-24',
+        groupName: 'Folio Group',
+        rooms: [{
+          roomNumber: '0524',
+          guestName: 'Guest A',
+          reservationNumber: null,
+          bookedRoomType: 'STR',
+          actualRoomType: 'STR',
+          blockCode: null,
+          fromDate: null,
+          toDate: null,
+          adults: 1,
+          children: 0,
+          babies: null,
+          rooms: 1,
+          rateCode: null,
+          reportedRate: '100.00',
+        }],
+        occupancy: { occupiedRoomCount: 1, occupiedRoomNumbers: ['0524'], duplicateRoomNumbers: [] },
+        conflicts: [],
+      }],
+    });
+    extractPdfTextPages.mockResolvedValue([]);
+    parseFolio.mockReturnValue({
+      currency: 'ILS',
+      totals: { ILS: '100.00', USD: null },
+      entries: [{
+        roomNumber: '0524',
+        guestName: 'Guest A',
+        transactionDate: '2026-10-24',
+        description: '0524 Guest A',
+        charges: '100.00',
+        credits: null,
+        nights: null,
+        currency: 'ILS',
+      }],
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'New Project' }));
+    const groupFile = new File(['group-pdf'], '24.10.26.pdf', { type: 'application/pdf' });
+    Object.defineProperty(groupFile, 'arrayBuffer', { value: async () => new ArrayBuffer(0) });
+    fireEvent.change(screen.getByLabelText('Group report PDF'), { target: { files: [groupFile] } });
+
+    await waitFor(() => expect(screen.getByText('Folio Group')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Select group Folio Group on 2026-10-24' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Folio Comparison' }));
+
+    const folioFile = new File(['folio-pdf'], 'folio.pdf', { type: 'application/pdf' });
+    Object.defineProperty(folioFile, 'arrayBuffer', { value: async () => new ArrayBuffer(1) });
+    fireEvent.change(screen.getByLabelText('Folio PDF'), { target: { files: [folioFile] } });
+
+    await waitFor(() => expect(screen.getByText('Matched')).toBeInTheDocument());
+    expect(extractPdfTextPages).toHaveBeenCalledTimes(1);
+    expect(parseFolio).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Complimentary & Staff' }));
+    expect(screen.getByRole('heading', { name: 'Complimentary & Staff' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Excel Export' }));
+    expect(screen.getByRole('heading', { name: 'Excel Export' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Additional Charges' }));
+    expect(screen.getByRole('heading', { name: 'Additional Charges' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Folio Comparison' }));
+
+    expect(screen.getByText('Matched')).toBeInTheDocument();
+    expect(extractPdfTextPages).toHaveBeenCalledTimes(1);
+    expect(parseFolio).toHaveBeenCalledTimes(1);
     expect(analyzeGroupReportPdf).toHaveBeenCalledTimes(1);
   });
 

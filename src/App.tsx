@@ -21,7 +21,7 @@ import { hashArrayBuffer } from './infrastructure/files/hashArrayBuffer';
 import { loadWorkspaceSnapshot, saveWorkspaceSnapshot } from './infrastructure/storage/workspaceStore';
 import type { FolioWarningAcknowledgement } from './infrastructure/storage/workspaceStore';
 
-type View = 'home' | 'workspace' | 'folio';
+type View = 'home' | 'workspace' | 'folio' | 'complimentary-staff' | 'additional-charges' | 'export';
 type UploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 interface UploadItem {
@@ -327,12 +327,12 @@ function App() {
     setCorrectionHistory((current) => [...current, correction]);
   }
 
-  if (view === 'workspace' || view === 'folio') {
+  if (view !== 'home') {
     return (
       <main className="app-shell">
         <section
           className="workspace-card"
-          aria-labelledby={view === 'folio' ? 'folio-screen-title' : 'workspace-title'}
+          aria-labelledby={view === 'workspace' ? 'workspace-title' : `${view}-screen-title`}
         >
           <nav className="screen-navigation" aria-label="Project screens">
             <button
@@ -351,8 +351,32 @@ function App() {
             >
               Folio Comparison
             </button>
+            <button
+              className={`text-button${view === 'complimentary-staff' ? ' active' : ''}`}
+              type="button"
+              aria-current={view === 'complimentary-staff' ? 'page' : undefined}
+              onClick={() => setView('complimentary-staff')}
+            >
+              Complimentary &amp; Staff
+            </button>
+            <button
+              className={`text-button${view === 'additional-charges' ? ' active' : ''}`}
+              type="button"
+              aria-current={view === 'additional-charges' ? 'page' : undefined}
+              onClick={() => setView('additional-charges')}
+            >
+              Additional Charges
+            </button>
+            <button
+              className={`text-button${view === 'export' ? ' active' : ''}`}
+              type="button"
+              aria-current={view === 'export' ? 'page' : undefined}
+              onClick={() => setView('export')}
+            >
+              Excel Export
+            </button>
           </nav>
-          <div className="workspace-content" hidden={view === 'folio'}>
+          <div className="workspace-content" hidden={view !== 'workspace'}>
             <p className="eyebrow">Hotel Breakdown V1</p>
             <h1 id="workspace-title">Project workspace</h1>
             {project && <p className="project-name">Project: {project.name}</p>}
@@ -637,6 +661,24 @@ function App() {
                 ? { ...current, acknowledgedAt: new Date().toISOString() }
                 : current)}
             />
+          </section>
+          <section className="placeholder-screen" hidden={view !== 'complimentary-staff'} aria-labelledby="complimentary-staff-screen-title">
+            <p className="eyebrow">Project workspace</p>
+            <h1 id="complimentary-staff-screen-title">Complimentary &amp; Staff</h1>
+            <p className="placeholder-description">Placeholder screen. Calculation rules for Complimentary and Staff rooms will be added later.</p>
+            <p className="placeholder-status" role="status">Not implemented yet.</p>
+          </section>
+          <section className="placeholder-screen" hidden={view !== 'additional-charges'} aria-labelledby="additional-charges-screen-title">
+            <p className="eyebrow">Project workspace</p>
+            <h1 id="additional-charges-screen-title">Additional Charges</h1>
+            <p className="placeholder-description">Placeholder screen. Meals and other additional-charge rules will be added later.</p>
+            <p className="placeholder-status" role="status">Not implemented yet.</p>
+          </section>
+          <section className="placeholder-screen" hidden={view !== 'export'} aria-labelledby="export-screen-title">
+            <p className="eyebrow">Project workspace</p>
+            <h1 id="export-screen-title">Excel Export</h1>
+            <p className="placeholder-description">Placeholder screen. Template selection, validation warnings, and workbook generation will be added later.</p>
+            <p className="placeholder-status" role="status">Not implemented yet.</p>
           </section>
         </section>
       </main>

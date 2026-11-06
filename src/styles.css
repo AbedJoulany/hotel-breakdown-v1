@@ -101,6 +101,35 @@ button:hover {
   margin-bottom: 0;
 }
 
+.placeholder-screen {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.placeholder-screen[hidden] {
+  display: none;
+}
+
+.placeholder-screen h1 {
+  font-size: clamp(2.2rem, 6vw, 4rem);
+}
+
+.placeholder-description {
+  color: #6c665c;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 38rem;
+}
+
+.placeholder-status {
+  background: #fffaf0;
+  border: 1px solid #e8cf9f;
+  border-radius: 0.65rem;
+  color: #8a641e;
+  margin: 0;
+  padding: 0.75rem;
+}
+
 .eyebrow {
   color: #8b5e34;
   font-size: 0.75rem;
