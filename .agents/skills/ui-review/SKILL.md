@@ -9,10 +9,11 @@ description: UX, UI and accessibility review. Use when reviewing a proposed or i
 Use when reviewing a proposed or implemented screen, workflow, design-system consistency, or release readiness.
 
 ## Read first
+
 - `AGENTS.md`
-- `docs/TASK_PROTOCOL.md`
-- 
-docs/USER_FLOW.md- docs/DESIGN_SYSTEM.md- docs/REQUIREMENTS.md
+- `docs/PRD.md`
+- `docs/ARCHITECTURE.md`
+- `docs/IMPLEMENTATION_STATUS.md`
 
 ## Procedure
 1. Identify the user's exact request and current roadmap phase; check approved decisions and relevant requirements.

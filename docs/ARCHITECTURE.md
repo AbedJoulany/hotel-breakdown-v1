@@ -59,8 +59,12 @@ Implemented UI behavior in `src/App.tsx`:
 
 - Home actions for `New Project` and `Continue Project`.
 - Initial Workspace view.
-- Local PDF selection.
-- Display of report date, detected groups, unique room counts, and conflict warnings.
+- Local single or multiple PDF selection.
+- In-memory active report collection with one report per embedded date.
+- Display of report dates, detected groups, unique room counts, and conflict warnings.
+- Group selection across active reports.
+- Editable date range, coverage/missing-date warnings, and basic Room-Nights summary.
+- Selected-group room details grouped by report date.
 - User-visible analysis errors.
 
 The current UI does not yet own a persisted project or a complete workflow state machine.
@@ -68,13 +72,15 @@ The current UI does not yet own a persisted project or a complete workflow state
 ## Current data flow
 
 ```text
-Local PDF file
-  -> File.arrayBuffer()
+Local PDF file(s)
+  -> File.arrayBuffer() [for each selected file]
   -> extractPdfTextPages()
   -> parseGroupReport()
   -> normalizeGroupReportRow()
   -> summarizeRoomOccupancy() + findRoomConflicts()
-  -> AnalyzedGroupReport
+  -> replaceReportForDate()
+  -> active report collection and per-date analyses
+  -> coverage and room-night summaries
   -> React Workspace summary
 ```
 
@@ -103,12 +109,13 @@ Implemented:
 - Missing required room and guest fields are rejected.
 - PDF analysis errors are caught at the current UI boundary and shown as an error message.
 - Duplicate and material-conflict information is returned as structured data.
+- Multiple selected files are processed sequentially; a failed file does not stop the remaining files.
+- Missing dates are reported for the user-selected date range.
 
 Planned:
 
 - Per-file upload status and retry handling.
-- Partial processing when one file in a collection fails.
-- Missing-date warnings and explicit user acknowledgment.
+- Explicit acknowledgment for missing dates.
 - Blocking versus non-blocking validation states for financial export.
 
 ## Testing architecture

@@ -9,10 +9,11 @@ description: Screen and interaction design. Use for screen layouts, component be
 Use for screen layouts, component behavior, responsive states, and interaction specifications after user flow is approved.
 
 ## Read first
+
 - `AGENTS.md`
-- `docs/TASK_PROTOCOL.md`
-- 
-docs/USER_FLOW.md- docs/DESIGN_SYSTEM.md- docs/REQUIREMENTS.md
+- `docs/PRD.md`
+- `docs/ARCHITECTURE.md`
+- `docs/IMPLEMENTATION_STATUS.md`
 
 ## Procedure
 1. Identify the user's exact request and current roadmap phase; check approved decisions and relevant requirements.
@@ -22,7 +23,7 @@ docs/USER_FLOW.md- docs/DESIGN_SYSTEM.md- docs/REQUIREMENTS.md
 5. State impacted documents and acceptance criteria; request approval before changing approved scope or architecture.
 
 ## Domain guardrail
-Prioritize simple summary-first screens. Do not reintroduce V11 correction panels, Split Stay, Link Folio, or Exclude Night controls without a newly approved requirement.
+Prioritize simple summary-first screens. Do not introduce correction, Folio, exclusion, or other workflow controls unless they are approved and documented for this project.
 
 ## Output contract
 Screen specification: purpose, content hierarchy, components, states, interactions, keyboard/accessibility, mobile behavior, and acceptance checks.

@@ -9,10 +9,12 @@ description: Product planning and scope control. Use when deciding product scope
 Use when deciding product scope, priorities, milestones, dependencies, or changing an approved product decision.
 
 ## Read first
+
 - `AGENTS.md`
-- `docs/TASK_PROTOCOL.md`
-- 
-docs/PROJECT_VISION.md- docs/REQUIREMENTS.md- docs/ROADMAP.md- docs/DECISIONS.md
+- `docs/PRD.md`
+- `docs/ROADMAP.md`
+- `docs/DECISIONS.md`
+- `docs/IMPLEMENTATION_STATUS.md`
 
 ## Procedure
 1. Identify the user's exact request and current roadmap phase; check approved decisions and relevant requirements.

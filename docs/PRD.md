@@ -50,7 +50,12 @@ Daily hotel reports contain room, guest, group, occupancy, room-type, and rate i
 - Group Report parsing for the inspected ILS and USD layouts.
 - Report-date extraction, group detection, room-row normalization, and room-type mapping.
 - Unique-room occupancy summaries and material duplicate-room conflict detection.
-- Display of report date, detected groups, room counts, and conflict warnings.
+- Multiple Group Report upload with sequential local processing.
+- One active report per embedded `reportDate`, with exact-duplicate ignoring and replacement.
+- Report coverage, editable date range, and missing-date warnings.
+- Group selection across the active report collection.
+- Basic Room-Nights calculation and selected-group room summary.
+- Display of report dates, detected groups, room counts, and conflict warnings.
 
 ### Explicit exclusions for the current implementation slice
 
@@ -71,9 +76,10 @@ Daily hotel reports contain room, guest, group, occupancy, room-type, and rate i
 
 1. User uploads one or more daily Group Reports.
 2. The application extracts and normalizes report data locally.
-3. The application sorts by embedded `reportDate`.
-4. The application shows a simple list of detected group names.
-5. User selects the group to process.
+3. The application keeps one active valid report per embedded `reportDate` and sorts active reports chronologically.
+4. The application shows detected groups grouped by report date.
+5. User selects the group to process across the active report collection.
+6. The application shows date coverage, missing-date warnings, Room-Nights, and selected-group room details.
 
 ### Folio, Contract, Preview, Export
 
@@ -102,10 +108,12 @@ These sections are Approved / Planned and are not implemented in the current cod
 - Normalized room records.
 - Unique occupied-room count per group.
 - Duplicate room numbers and material conflicts.
+- Active report coverage and missing dates for the selected range.
+- Room-Nights for the selected group.
+- Selected-group room details grouped by report date.
 
 ### Planned output
 
-- Room-night totals.
 - Contract charges and separate financial lines.
 - Currency-specific totals.
 - Folio comparison status.

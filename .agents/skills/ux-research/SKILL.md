@@ -9,10 +9,11 @@ description: Evidence-led UX research. Use before selecting UX patterns, evaluat
 Use before selecting UX patterns, evaluating usability risks, planning research, or interpreting user feedback.
 
 ## Read first
+
 - `AGENTS.md`
-- `docs/TASK_PROTOCOL.md`
-- 
-docs/PROJECT_VISION.md- docs/REQUIREMENTS.md- docs/USER_FLOW.md
+- `docs/PRD.md`
+- `docs/ROADMAP.md`
+- `docs/IMPLEMENTATION_STATUS.md`
 
 ## Procedure
 1. Identify the user's exact request and current roadmap phase; check approved decisions and relevant requirements.

@@ -9,10 +9,12 @@ description: Frontend technical architecture. Use when selecting libraries, defi
 Use when selecting libraries, defining folder boundaries, data contracts, state management, storage, parser integration, test strategy, or implementation plans.
 
 ## Read first
+
 - `AGENTS.md`
-- `docs/TASK_PROTOCOL.md`
-- 
-docs/ARCHITECTURE.md- docs/REQUIREMENTS.md- docs/ROADMAP.md
+- `docs/ARCHITECTURE.md`
+- `docs/PRD.md`
+- `docs/ROADMAP.md`
+- `docs/IMPLEMENTATION_STATUS.md`
 
 ## Procedure
 1. Identify the user's exact request and current roadmap phase; check approved decisions and relevant requirements.
@@ -22,7 +24,7 @@ docs/ARCHITECTURE.md- docs/REQUIREMENTS.md- docs/ROADMAP.md
 5. State impacted documents and acceptance criteria; request approval before changing approved scope or architecture.
 
 ## Domain guardrail
-Clean-slate V12 uses React + TypeScript + Vite, PDF.js, ExcelJS, IndexedDB, Vitest. Engine must be pure and independent of UI and IO. V11 is read-only reference, never runtime dependency.
+The current V1 foundation uses React, TypeScript, Vite, PDF.js, and Vitest. Keep domain rules pure and independent of the UI and IO layers; treat planned persistence, financial, and export boundaries as unimplemented until verified in the codebase.
 
 ## Output contract
 Architecture proposal with boundaries, data flow, API/types, error handling, test plan, alternatives and consequences.

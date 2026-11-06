@@ -9,10 +9,12 @@ description: User journey and flow design. Use when designing or revising end-to
 Use when designing or revising end-to-end steps, branching states, recovery paths, and navigation.
 
 ## Read first
+
 - `AGENTS.md`
-- `docs/TASK_PROTOCOL.md`
-- 
-docs/REQUIREMENTS.md- docs/USER_FLOW.md- docs/DECISIONS.md
+- `docs/PRD.md`
+- `docs/ROADMAP.md`
+- `docs/DECISIONS.md`
+- `docs/IMPLEMENTATION_STATUS.md`
 
 ## Procedure
 1. Identify the user's exact request and current roadmap phase; check approved decisions and relevant requirements.
@@ -22,7 +24,7 @@ docs/REQUIREMENTS.md- docs/USER_FLOW.md- docs/DECISIONS.md
 5. State impacted documents and acceptance criteria; request approval before changing approved scope or architecture.
 
 ## Domain guardrail
-Default flow: Saved Breakdowns/New Breakdown → Upload New Reports/Use Saved Reports → Select Group → Optional Folio → Contract Setup → Preview → Excel Export. Show missing-data and retry paths.
+Use the current flow documented in `docs/PRD.md`. Distinguish implemented upload and group-selection behavior from planned persistence, Folio, pricing, preview, and export steps. Show missing-data and retry paths only when supported by the current implementation or explicitly marked as planned.
 
 ## Output contract
 An updated step-by-step user flow with entry/exit, states, errors, optional paths, and mapping to requirements.

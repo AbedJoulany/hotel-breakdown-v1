@@ -9,10 +9,11 @@ description: Design tokens and component standards. Use to establish or change c
 Use to establish or change colors, typography, spacing, form controls, patterns, accessibility standards, or reusable component conventions.
 
 ## Read first
+
 - `AGENTS.md`
-- `docs/TASK_PROTOCOL.md`
-- 
-docs/DESIGN_SYSTEM.md- docs/ARCHITECTURE.md
+- `docs/ARCHITECTURE.md`
+- `docs/PRD.md`
+- `docs/IMPLEMENTATION_STATUS.md`
 
 ## Procedure
 1. Identify the user's exact request and current roadmap phase; check approved decisions and relevant requirements.
@@ -22,7 +23,7 @@ docs/DESIGN_SYSTEM.md- docs/ARCHITECTURE.md
 5. State impacted documents and acceptance criteria; request approval before changing approved scope or architecture.
 
 ## Domain guardrail
-Design for English and Hebrew including RTL, accessible focus, sufficient contrast, error feedback, and responsive layouts. Language of Excel output is independent of currency.
+Design for English and Hebrew including RTL, accessible focus, sufficient contrast, error feedback, and responsive layouts. Keep financial and source-traceability rules aligned with the approved project documentation.
 
 ## Output contract
 Documented tokens, components, variants, interaction states, accessibility constraints, and migration impact.

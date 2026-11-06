@@ -9,10 +9,12 @@ description: Product requirements authoring. Use when drafting or revising requi
 Use when drafting or revising requirements, feature specifications, acceptance criteria, or nonfunctional constraints.
 
 ## Read first
+
 - `AGENTS.md`
-- `docs/TASK_PROTOCOL.md`
-- 
-docs/PROJECT_VISION.md- docs/REQUIREMENTS.md- docs/DECISIONS.md
+- `docs/PRD.md`
+- `docs/DECISIONS.md`
+- `docs/IMPLEMENTATION_STATUS.md`
+- `docs/ROADMAP.md`
 
 ## Procedure
 1. Identify the user's exact request and current roadmap phase; check approved decisions and relevant requirements.

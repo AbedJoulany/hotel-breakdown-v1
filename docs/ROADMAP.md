@@ -14,7 +14,7 @@ Last reviewed: 2026-11-06
 
 ### Phase 0 - Planning and documentation
 
-**In progress**
+**Completed**
 
 Completed planning work:
 
@@ -28,7 +28,6 @@ Completed planning work:
 
 Remaining documentation work:
 
-- Create this roadmap document.
 - Keep the documentation synchronized after material implementation tasks.
 
 Exit condition: the essential documentation set exists and clearly separates implemented, planned, proposed, and unresolved items.
@@ -57,27 +56,24 @@ Completed:
 - Group and room-row normalization.
 - Unique-room occupancy summaries.
 - Duplicate-room conflict detection.
-- UI display of detected groups and room counts.
+- Multiple Group Report upload and sequential processing.
+- One active valid report per embedded report date, with duplicate/replacement handling.
+- Report coverage, editable date range, and missing-date warnings.
+- Group selection across active reports.
+- Basic room-night preview and selected-group room summary.
+- UI display of detected groups and unique room counts.
 
 Next proposed small tasks, in order:
 
-1. Add a minimal project state model and create-project action.
-2. Add multi-report collection state in memory, using one active valid report per date.
-3. Add a simple group-selection step after report analysis.
-4. Add a date-range and basic missing-date summary.
-5. Add a minimal room-night preview for the selected group.
-6. Add basic local persistence for the vertical slice.
-7. Add resume behavior for the saved vertical-slice project.
+1. Add basic local persistence for the vertical slice.
+2. Add resume behavior for the saved vertical-slice project.
 
 Exit condition: `Create Project -> Upload Report -> Select Group -> Calculate Basic Room-Nights -> Preview -> Save and Resume` works locally with the inspected report formats.
 
 ## Phase 3 - Robust reports and group handling
 
-**Planned**
+**In progress**
 
-- Upload reports in any order and sort by report date.
-- Replace valid reports by date while ignoring invalid files.
-- Detect missing report dates and require explicit handling.
 - Improve group matching across dates without merging uncertain groups silently.
 - Show per-file processing status and retry paths.
 - Add explicit correction workflow and correction history.

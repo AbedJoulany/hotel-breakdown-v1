@@ -18,6 +18,8 @@ Last reviewed: 2026-11-06
 - Home screen with `New Project` and `Continue Project` actions.
 - Initial Workspace screen.
 - Local PDF file selection from the browser.
+- In-memory project state for the current workspace.
+- Multiple Group Report selection and sequential processing.
 
 ### PDF report analysis
 
@@ -44,6 +46,9 @@ Last reviewed: 2026-11-06
 - Exact duplicate reports are ignored.
 - A valid report replaces a different valid report for the same `reportDate`.
 - Invalid reports do not replace an active valid report.
+- Active reports are sorted by embedded report date.
+- Report coverage and missing dates can be calculated for a selected date range.
+- Basic room-night totals are calculated for a selected group.
 
 ### Current UI output
 
@@ -53,6 +58,12 @@ Last reviewed: 2026-11-06
 - Unique occupied-room count is shown per group.
 - Group conflicts are surfaced as review warnings.
 - PDF analysis errors are shown to the user.
+- Active reports are displayed by report date.
+- A group can be selected across the active report collection.
+- Date range inputs and missing-date warnings are displayed.
+- Room-Nights and selected-group room details are displayed in the summary.
+- Multiple-upload results summarize added, replaced, and duplicate files.
+- Failed files do not prevent other selected files from being processed.
 
 ## Verification
 
@@ -65,9 +76,10 @@ npm run build
 
 Observed result:
 
-- 8 test files passed.
-- 22 tests passed.
+- 12 test files passed.
+- 30 tests passed.
 - Production build passed.
+
 - PDF.js may emit `standardFontDataUrl` warnings during tests; these did not fail the test run.
 
 ## Planned
@@ -77,8 +89,6 @@ The following V1 capabilities are agreed requirements but are not implemented ye
 - Project creation and real Continue Project behavior.
 - IndexedDB/Dexie persistence and automatic saving.
 - Independent project report snapshots and saved report collections.
-- Report upload ordering, date coverage, missing-date handling, and replacement in the UI.
-- Group selection and cross-report group matching workflow.
 - Manual correction workflow and correction history.
 - Contract pricing rules and effective date overrides.
 - Decimal financial calculations and per-room-night rounding.
@@ -92,9 +102,7 @@ The following V1 capabilities are agreed requirements but are not implemented ye
 
 ## Proposed
 
-- Add a small UI/application boundary around report replacement and active-report validation.
 - Add code splitting for the PDF.js Worker and application bundle when performance work begins.
-- Add the approved documentation set incrementally, starting with `AGENTS.md` and this status file.
 
 These items are recommendations, not completed functionality.
 
@@ -108,6 +116,6 @@ These items are recommendations, not completed functionality.
 - Final persistence schema and backup file format.
 - Whether and how duplicate-room conflicts should be corrected in the UI.
 
-## Next approved task
+## Next proposed task
 
-No next implementation task is recorded here until the next task is explicitly approved. Documentation work continues one small file at a time.
+Add per-file upload status and retry controls without changing the current report identity or replacement rules.
