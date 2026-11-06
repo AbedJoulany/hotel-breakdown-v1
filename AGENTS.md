@@ -73,3 +73,4 @@ After each approved implementation task, report briefly:
 **Tests:** commands run and their result.
 
 **Next:** one proposed small task, then stop for approval.
+

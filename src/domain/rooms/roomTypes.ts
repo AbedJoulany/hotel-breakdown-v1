@@ -27,3 +27,4 @@ export type RoomTypeCode = (typeof ROOM_TYPES)[number]['code'];
 export function findRoomType(code: string): RoomType | undefined {
   return ROOM_TYPES.find((roomType) => roomType.code === code);
 }
+

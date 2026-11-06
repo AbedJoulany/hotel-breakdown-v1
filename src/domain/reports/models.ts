@@ -35,3 +35,4 @@ export interface ActiveReportDocument {
 export interface ReportCandidate extends ActiveReportDocument {
   isValid: boolean;
 }
+

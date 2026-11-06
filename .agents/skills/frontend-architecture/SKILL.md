@@ -34,3 +34,4 @@ Architecture proposal with boundaries, data flow, API/types, error handling, tes
 - No unapproved product decisions presented as approved.
 - Open questions and verification steps are explicit.
 - Documentation updates proposed or applied only within the authorized scope.
+

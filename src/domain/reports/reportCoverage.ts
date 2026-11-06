@@ -73,3 +73,4 @@ function addUtcDays(value: Date, days: number): Date {
 function formatIsoDate(value: Date): IsoDate {
   return value.toISOString().slice(0, 10) as IsoDate;
 }
+

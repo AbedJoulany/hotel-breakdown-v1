@@ -61,12 +61,14 @@ Completed:
 - Report coverage, editable date range, and missing-date warnings.
 - Group selection across active reports.
 - Basic room-night preview and selected-group room summary.
+- Per-file upload status and retry paths.
+- Basic IndexedDB persistence and `Continue Project` restoration for the current parsed workspace.
 - UI display of detected groups and unique room counts.
 
 Next proposed small tasks, in order:
 
-1. Add basic local persistence for the vertical slice.
-2. Add resume behavior for the saved vertical-slice project.
+1. Preserve original PDF binaries in the local workspace snapshot.
+2. Define backup export/import and storage-failure recovery.
 
 Exit condition: `Create Project -> Upload Report -> Select Group -> Calculate Basic Room-Nights -> Preview -> Save and Resume` works locally with the inspected report formats.
 
@@ -74,9 +76,8 @@ Exit condition: `Create Project -> Upload Report -> Select Group -> Calculate Ba
 
 **In progress**
 
-- Improve group matching across dates without merging uncertain groups silently.
-- Show per-file processing status and retry paths.
-- Add explicit correction workflow and correction history.
+- Add explicit handling for ambiguous group-name collisions without merging uncertain groups silently.
+- Add final correction validation and prevent completion while material conflicts remain unresolved.
 - Prevent final processing when material conflicts remain unresolved.
 
 Exit condition: multi-date projects remain traceable and do not silently fabricate or merge source data.
@@ -96,9 +97,7 @@ Exit condition: multi-date projects remain traceable and do not silently fabrica
 
 Unresolved prerequisites:
 
-- Pricing-rule precedence.
-- Complimentary formula.
-- Final currency and precision policy per currency.
+- None for the approved V1 currency scope; ILS and USD both use two decimal places.
 
 Exit condition: deterministic financial calculations have unit tests for rounding, missing rates, overlapping rules, and multiple currencies.
 
@@ -170,3 +169,4 @@ Each implementation task must be small enough to review independently and must i
 6. A stop point before the next task.
 
 No phase is considered complete merely because its code exists; its exit condition and relevant tests must be verified.
+

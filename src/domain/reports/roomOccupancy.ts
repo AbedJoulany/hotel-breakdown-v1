@@ -14,7 +14,7 @@ const CONFLICT_FIELDS = [
   'reportedRate',
 ] as const;
 
-type ConflictField = (typeof CONFLICT_FIELDS)[number];
+export type ConflictField = (typeof CONFLICT_FIELDS)[number];
 
 export interface RoomOccupancySummary {
   occupiedRoomCount: number;
@@ -83,3 +83,4 @@ export function findRoomConflicts(rooms: RoomRecord[]): RoomConflict[] {
 function unique(values: string[]): string[] {
   return [...new Set(values)];
 }
+

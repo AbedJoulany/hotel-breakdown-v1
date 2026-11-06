@@ -72,23 +72,56 @@ Last reviewed: 2026-11-06
 - **Reason:** Prevent planned capabilities and assumptions from being presented as implemented behavior.
 - **Evidence:** `AGENTS.md` and `IMPLEMENTATION_STATUS.md`.
 
+### DEC-009 - Pricing rule specificity precedence
+
+- **Status:** Superseded by DEC-014
+- **Decision:** The earlier seven-level pricing specificity proposal is no longer active.
+
+### DEC-010 - Missing prices and Final/Draft behavior
+
+- **Status:** Approved; not implemented
+- **Decision:** A missing required price is `Missing Price`, never zero. It blocks `Final` export but may appear in a clearly labelled `Draft` with the missing values shown.
+- **Reason:** Preserve financial correctness and make incomplete data visible.
+
+### DEC-011 - Decimal arithmetic, rounding, and currencies
+
+- **Status:** Approved; not implemented
+- **Decision:** Calculate each room-night with precise decimal arithmetic, apply `ROUND_HALF_UP` using the currency's supported number of decimal places, then sum. Keep currency totals separate and never convert currencies automatically.
+- **Unresolved detail:** The supported minor-unit mapping for each currency still needs to be defined or verified before implementation.
+
+### DEC-012 - Complimentary and additional charges
+
+- **Status:** Approved; not implemented
+- **Decision:** `Complimentary` is a manually confirmed discount line, and `Additional Charges` are manually entered independent line items. No automatic Complimentary formula is used.
+- **Reason:** Avoid inventing an entitlement formula that is not present in the inspected source data or approved requirements.
+
+### DEC-013 - V1 currencies and Default Rate
+
+- **Status:** Approved; not implemented
+- **Decision:** V1 supports `ILS` and `USD` only, with two decimal places for both currencies. No automatic currency conversion is used. `Default Rate` is not enabled in V1; when no pricing rule matches, the result is `Missing Price`.
+- **Reason:** Keep the first financial implementation limited to the confirmed hotel currencies and prevent an unspecified fallback price from hiding missing contract data.
+
+### DEC-014 - Four pricing rule categories
+
+- **Status:** Superseded by DEC-015
+- **Decision:** The four-category pricing proposal is no longer active.
+
+### DEC-015 - Single pricing rule shape
+
+- **Status:** Approved; implemented in the domain and UI
+- **Decision:** V1 uses one pricing rule shape only: `Date + Room Type + Occupancy Band`, matching `reportDate`, `roomType`, `adults`, and `children` together. There is no `Default Rate` and no user-facing rule-category selector.
+- **Conflict rule:** Multiple rules with the same complete match produce `Pricing Conflict`; the application must not choose automatically.
+- **Reason:** Keep pricing explicit and prevent partial or implicit matches from hiding missing contract data.
+
 ## Proposed decisions
 
 No additional proposed decision is being recorded in this file. New recommendations must be approved before they become decisions.
 
 ## Unresolved decisions
 
-### DEC-U001 - Pricing rule precedence
-
-Define precedence when room type, adult/child occupancy, effective dates, and date-specific overrides overlap.
-
 ### DEC-U002 - Folio tolerance and export blocking
 
 Define tolerance, comparison statuses, acknowledgment behavior, and which discrepancies block Final export.
-
-### DEC-U003 - Complimentary discount formula
-
-Define the future automatic formula. V1 currently treats complimentary as a separate manually confirmed discount and does not implement an automatic formula.
 
 ### DEC-U004 - Persistence schema and storage limits
 
@@ -105,3 +138,4 @@ Define how users review and correct material conflicts while preserving the rule
 ## Superseded decisions
 
 None recorded.
+

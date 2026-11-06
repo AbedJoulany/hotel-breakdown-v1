@@ -34,3 +34,4 @@ An updated step-by-step user flow with entry/exit, states, errors, optional path
 - No unapproved product decisions presented as approved.
 - Open questions and verification steps are explicit.
 - Documentation updates proposed or applied only within the authorized scope.
+

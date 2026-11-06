@@ -34,3 +34,4 @@ A PRD section with user problem, actors, workflow, inputs, outputs, business rul
 - No unapproved product decisions presented as approved.
 - Open questions and verification steps are explicit.
 - Documentation updates proposed or applied only within the authorized scope.
+

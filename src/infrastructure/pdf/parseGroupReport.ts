@@ -1,5 +1,6 @@
 import { normalizeGroupReportRow, normalizeReportDate } from '../../domain/reports/normalizeGroupReportRow';
 import type { DailyGroupSnapshot, RoomRecord } from '../../domain/reports/models';
+import { groupMatchKey } from '../../domain/reports/groupMatch';
 import type { PdfTextItem, PdfTextPage } from './pdfTextExtractor';
 
 export interface ParsedGroupReport {
@@ -18,11 +19,11 @@ function mergeGroups(groups: DailyGroupSnapshot[]): DailyGroupSnapshot[] {
   const merged = new Map<string, DailyGroupSnapshot>();
 
   for (const group of groups) {
-    const existing = merged.get(group.groupName);
+    const existing = merged.get(groupMatchKey(group.groupName));
     if (existing) {
       existing.rooms.push(...group.rooms);
     } else {
-      merged.set(group.groupName, { ...group, rooms: [...group.rooms] });
+      merged.set(groupMatchKey(group.groupName), { ...group, rooms: [...group.rooms] });
     }
   }
 
@@ -117,3 +118,4 @@ function findReportDate(pages: PdfTextPage[]): string {
 function isRoomNumber(value: string): boolean {
   return /^\d{4}$/.test(value.trim());
 }
+

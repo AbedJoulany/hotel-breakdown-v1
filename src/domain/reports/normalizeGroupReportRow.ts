@@ -98,3 +98,4 @@ function normalizeInteger(value?: string): number | null {
 
   return Number(text);
 }
+
