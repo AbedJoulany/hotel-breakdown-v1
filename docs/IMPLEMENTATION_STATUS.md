@@ -49,6 +49,11 @@ Last reviewed: 2026-11-06
 - Active reports are sorted by embedded report date.
 - Report coverage and missing dates can be calculated for a selected date range.
 - Basic room-night totals are calculated for a selected group.
+- Pure pricing-rule contracts and matching results are implemented for one complete `Date + Room Type + Occupancy Band` rule, plus `Pricing Conflict` and `Missing Price`.
+- `Pricing Rules` UI supports manual entry of the single rule shape and displays `Matched`, `Missing Price`, and `Pricing Conflict` statuses.
+- Basic financial summaries calculate matched room-night charges with two-decimal ILS/USD totals; Final export blocking, discounts, and additional charges are not implemented.
+- Numeric `reportedRate` observations from the selected group are shown as non-binding price suggestions; the user must choose the currency and add them manually. Active pricing rules are persisted in the local workspace snapshot.
+- Group matching uses a safe comparison key that trims and collapses whitespace and ignores letter case while preserving the original display name.
 
 ### Current UI output
 
@@ -57,13 +62,22 @@ Last reviewed: 2026-11-06
 - Detected groups are listed.
 - Unique occupied-room count is shown per group.
 - Group conflicts are surfaced as review warnings.
+- Selected-group summaries show conflict room numbers, differing fields, and the involved source records without changing either record.
+- A pure `RoomCorrection` model and `applyRoomCorrections` function can derive corrected room records without mutating source rows.
+- The UI can select a record for a room conflict, and active corrections plus correction history are persisted in the local workspace snapshot; original PDF binaries and final blocking rules remain unimplemented.
 - PDF analysis errors are shown to the user.
 - Active reports are displayed by report date.
 - A group can be selected across the active report collection.
 - Date range inputs and missing-date warnings are displayed.
 - Room-Nights and selected-group room details are displayed in the summary.
+- Selected-group room details show Booked Room Type, Actual Room Type, Adults/Children occupancy, Reported Price, and Pricing status.
+- A compact Financial Summary shows only separate ILS and USD totals.
 - Multiple-upload results summarize added, replaced, and duplicate files.
 - Failed files do not prevent other selected files from being processed.
+- Per-file upload states are displayed as `pending`, `processing`, `completed`, or `failed`.
+- Failed files expose a retry action that reprocesses only that file.
+- IndexedDB stores the current project, active report metadata, parsed analyses, active corrections, and correction history locally.
+- `Continue Project` restores the saved workspace state from the same device.
 
 ## Verification
 
@@ -76,8 +90,8 @@ npm run build
 
 Observed result:
 
-- 12 test files passed.
-- 30 tests passed.
+- 17 test files passed.
+- 48 tests passed.
 - Production build passed.
 
 - PDF.js may emit `standardFontDataUrl` warnings during tests; these did not fail the test run.
@@ -87,13 +101,13 @@ Observed result:
 The following V1 capabilities are agreed requirements but are not implemented yet:
 
 - Project creation and real Continue Project behavior.
-- IndexedDB/Dexie persistence and automatic saving.
+- Persistence of original PDF binaries, backup export/import, and storage recovery behavior.
 - Independent project report snapshots and saved report collections.
-- Manual correction workflow and correction history.
-- Contract pricing rules and effective date overrides.
-- Decimal financial calculations and per-room-night rounding.
+- Final correction validation and blocking completion while material conflicts remain unresolved.
+- Ambiguous group-name collision detection and user-assisted resolution.
+- Final financial validation and export blocking.
 - Complimentary discounts and additional charges.
-- Multi-currency financial totals.
+- Additional currencies beyond ILS/USD and currency conversion.
 - Optional Folio parsing and comparison.
 - Financial Preview and drill-down warnings.
 - Excel Draft and Final export in English and Hebrew.
@@ -108,9 +122,7 @@ These items are recommendations, not completed functionality.
 
 ## Unresolved
 
-- Final pricing-rule precedence for overlapping date and occupancy rules.
 - Folio discrepancy tolerance and the complete blocking/non-blocking validation policy.
-- The future automatic Complimentary discount formula.
 - Practical browser-storage limits and recovery behavior.
 - The internal structure of the Excel templates; they have not yet been inspected for export implementation.
 - Final persistence schema and backup file format.
@@ -118,4 +130,5 @@ These items are recommendations, not completed functionality.
 
 ## Next proposed task
 
-Add per-file upload status and retry controls without changing the current report identity or replacement rules.
+Add final financial validation and explicit blocking behavior for unresolved room conflicts, pricing conflicts, and missing prices before any future Final export.
+
