@@ -30,7 +30,7 @@ const VISUAL_STYLES: Record<ExportLanguage, VisualStyle> = {
 };
 
 export async function buildHebrewWorkbook(model: CanonicalExportModel): Promise<ExcelJS.Workbook> {
-  return buildWorkbook(model, 'hebrew');
+  return buildHebrewWorkbookScratch(model);
 }
 
 export async function buildUsdWorkbook(model: CanonicalExportModel): Promise<ExcelJS.Workbook> {
@@ -46,6 +46,183 @@ export async function downloadWorkbook(workbook: ExcelJS.Workbook, fileName: str
   anchor.download = fileName;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<ExcelJS.Workbook> {
+  const workbook = new ExcelJS.Workbook();
+  const style = VISUAL_STYLES.hebrew;
+  workbook.creator = 'Hotel Breakdown V1';
+  workbook.created = new Date();
+  workbook.calcProperties.fullCalcOnLoad = true;
+
+  const worksheet = workbook.addWorksheet('Hotel Breakdown', {
+    views: [{ rightToLeft: true, showGridLines: false }],
+    pageSetup: { orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+  });
+  worksheet.pageSetup.margins = { left: 0.33, right: 0.48, top: 0.36, bottom: 0.35, header: 0.22, footer: 0.25 };
+  worksheet.properties.defaultRowHeight = 15;
+  worksheet.columns = [
+    { width: 12.7 },
+    { width: 35.1 },
+    { width: 14 },
+    { width: 7.1 },
+    { width: 6.3 },
+    { width: 22.1 },
+    { width: 2 },
+  ];
+
+  const logoId = workbook.addImage({ base64: ORIENT_LOGO_DATA_URL, extension: 'jpeg' });
+  worksheet.addImage(logoId, 'B1:D5');
+
+  const labels = {
+    title: 'פירוט מלון',
+    draft: 'טיוטה',
+    group: 'שם הקבוצה',
+    hotel: 'מלון מארח',
+    dates: 'תאריכי דיווח',
+    currency: 'מטבע',
+    checkIn: 'צ׳ק-אין',
+    checkOut: 'צ׳ק-אאוט',
+    section: 'פירוט עלויות',
+    description: 'הרכב',
+    rate: 'מחיר בשקלים',
+    rooms: 'חדרים',
+    nights: 'לילות',
+    total: 'סה״כ',
+    beforeVat: 'סה״כ לחדרים לא כולל מע״מ',
+    vat: 'מע״מ 18%',
+    includingVat: 'סה״כ לחדרים כולל מע״מ',
+    summary: 'סיכום',
+  };
+
+  worksheet.mergeCells('B6:F6');
+  worksheet.getCell('B6').value = labels.title;
+  styleMergedRow(worksheet, 6, 2, 6, styleTitle, style);
+  worksheet.mergeCells('B7:F7');
+  worksheet.getCell('B7').value = labels.draft;
+  styleMergedRow(worksheet, 7, 2, 6, styleDraft, style);
+
+  writeHebrewMetadataRow(worksheet, 8, labels.group, model.metadata.groupName ?? '—', style);
+  writeHebrewMetadataRow(worksheet, 9, labels.hotel, model.metadata.hotelName ?? '—', style);
+  writeHebrewMetadataRow(worksheet, 10, labels.dates, model.metadata.reportDates.join(', '), style);
+  writeHebrewMetadataRow(worksheet, 11, labels.currency, 'ILS', style);
+  worksheet.getCell('B12').value = labels.checkIn;
+  worksheet.getCell('C12').value = model.metadata.checkInDate ?? '—';
+  worksheet.getCell('D12').value = labels.checkOut;
+  worksheet.getCell('E12').value = model.metadata.checkOutDate ?? '—';
+  styleMetadataLabel(worksheet.getCell('B12'), style);
+  styleMetadataValue(worksheet.getCell('C12'), style);
+  styleMetadataLabel(worksheet.getCell('D12'), style);
+  styleMetadataValue(worksheet.getCell('E12'), style);
+
+  let row = 14;
+  const nightlyBeforeRefs: string[] = [];
+  const nightlyVatRefs: string[] = [];
+  for (const night of model.nights) {
+    worksheet.mergeCells(`B${row}:F${row}`);
+    worksheet.getCell(`B${row}`).value = `${labels.section} · ${night.reportDate}`;
+    styleMergedRow(worksheet, row, 2, 6, styleSection, style);
+    row += 1;
+
+    const headers = [labels.description, labels.rate, labels.rooms, labels.nights, labels.total];
+    headers.forEach((value, index) => {
+      const cell = worksheet.getCell(row, index + 2);
+      cell.value = value;
+      styleHeader(cell, style, index === 0, index === headers.length - 1);
+    });
+    row += 1;
+
+    const firstDetailRow = row;
+    for (const charge of night.roomCharges) {
+      writeHebrewChargeRow(worksheet, row, charge, style);
+      row += 1;
+    }
+    const lastDetailRow = row - 1;
+    const range = firstDetailRow <= lastDetailRow ? `F${firstDetailRow}:F${lastDetailRow}` : null;
+    const beforeVatRow = row;
+    writeHebrewTotalRow(worksheet, beforeVatRow, labels.beforeVat, range ? `=IF(COUNTIF(${range},"")>0,"",SUM(${range}))` : '=""', style.subtotalFill, style);
+    row += 1;
+    const vatRow = row;
+    writeHebrewTotalRow(worksheet, vatRow, labels.vat, `=IF(F${beforeVatRow}="","",F${beforeVatRow}*18%)`, undefined, style);
+    row += 1;
+    const includingVatRow = row;
+    writeHebrewTotalRow(worksheet, includingVatRow, labels.includingVat, `=IF(F${beforeVatRow}="","",F${beforeVatRow}+F${vatRow})`, style.grandTotalFill, style);
+    nightlyBeforeRefs.push(`F${beforeVatRow}`);
+    nightlyVatRefs.push(`F${vatRow}`);
+    row += 2;
+  }
+
+  const summaryRow = row;
+  worksheet.mergeCells(`B${summaryRow}:F${summaryRow}`);
+  worksheet.getCell(`B${summaryRow}`).value = labels.summary;
+  styleMergedRow(worksheet, summaryRow, 2, 6, styleSection, style);
+  row += 1;
+
+  const overallBeforeVatRow = row;
+  const overallBeforeVatFormula = nightlyBeforeRefs.length
+    ? `=IF(OR(${nightlyBeforeRefs.map((ref) => `${ref}=""`).join(',')}),"",SUM(${nightlyBeforeRefs.join(',')}))`
+    : '=""';
+  writeHebrewTotalRow(worksheet, overallBeforeVatRow, labels.beforeVat, overallBeforeVatFormula, style.subtotalFill, style);
+  row += 1;
+  const overallVatRow = row;
+  const overallVatFormula = nightlyVatRefs.length
+    ? `=IF(OR(${nightlyVatRefs.map((ref) => `${ref}=""`).join(',')}),"",SUM(${nightlyVatRefs.join(',')}))`
+    : '=""';
+  writeHebrewTotalRow(worksheet, overallVatRow, labels.vat, overallVatFormula, undefined, style);
+  row += 1;
+  const overallIncludingVatRow = row;
+  writeHebrewTotalRow(worksheet, overallIncludingVatRow, labels.includingVat, `=IF(F${overallBeforeVatRow}="","",F${overallBeforeVatRow}+F${overallVatRow})`, style.grandTotalFill, style);
+
+  worksheet.pageSetup.printArea = `A1:G${overallIncludingVatRow}`;
+  return workbook;
+}
+
+function writeHebrewMetadataRow(worksheet: ExcelJS.Worksheet, row: number, label: string, value: string, style: VisualStyle) {
+  worksheet.getCell(`B${row}`).value = label;
+  worksheet.mergeCells(`C${row}:F${row}`);
+  worksheet.getCell(`C${row}`).value = value;
+  styleMetadataLabel(worksheet.getCell(`B${row}`), style);
+  for (let column = 3; column <= 6; column += 1) styleMetadataValue(worksheet.getCell(row, column), style);
+}
+
+function writeHebrewChargeRow(worksheet: ExcelJS.Worksheet, row: number, charge: CanonicalRoomChargeRow, style: VisualStyle) {
+  worksheet.getCell(`B${row}`).value = `${roomTypeLabel(charge.bookedRoomType, 'hebrew')} · ${occupancyLabel(charge.occupancyCategory, 'hebrew')}`;
+  worksheet.getCell(`C${row}`).value = charge.currency === 'ILS' && charge.rate.kind === 'numeric' ? Number(charge.rate.value) : null;
+  worksheet.getCell(`D${row}`).value = charge.roomCount;
+  worksheet.getCell(`E${row}`).value = charge.nights;
+  worksheet.getCell(`F${row}`).value = { formula: `=IF(OR(NOT(ISNUMBER(C${row})),C${row}=""),"",D${row}*C${row}*E${row})` };
+  for (let column = 2; column <= 6; column += 1) {
+    const cell = worksheet.getCell(row, column);
+    cell.font = { name: style.fontName, size: style.bodySize, bold: true, color: { argb: style.border } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = {
+      top: { style: 'thin', color: { argb: style.border } },
+      bottom: { style: 'thin', color: { argb: style.border } },
+      left: { style: column === 2 ? 'medium' : 'thin', color: { argb: style.border } },
+      right: { style: column === 6 ? 'medium' : 'thin', color: { argb: style.border } },
+    };
+  }
+  if (charge.financialCompleteness === 'incomplete') worksheet.getCell(`B${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.warningFill } };
+  for (const column of ['C', 'D', 'E', 'F']) worksheet.getCell(`${column}${row}`).numFmt = '"₪" #,##0.00;[Red]-"₪" #,##0.00';
+}
+
+function writeHebrewTotalRow(worksheet: ExcelJS.Worksheet, row: number, label: string, formula: string, fill: string | undefined, style: VisualStyle) {
+  worksheet.mergeCells(`B${row}:E${row}`);
+  worksheet.getCell(`B${row}`).value = label;
+  worksheet.getCell(`F${row}`).value = { formula };
+  for (let column = 2; column <= 5; column += 1) {
+    const cell = worksheet.getCell(row, column);
+    cell.font = { name: style.fontName, size: style.bodySize, bold: true, color: { argb: style.border } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    if (fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+    cell.border = { top: { style: 'medium', color: { argb: style.border } }, bottom: { style: 'medium', color: { argb: style.border } }, left: { style: column === 2 ? 'medium' : 'thin', color: { argb: style.border } }, right: { style: 'thin', color: { argb: style.border } } };
+  }
+  const value = worksheet.getCell(`F${row}`);
+  value.font = { name: style.fontName, size: style.bodySize, bold: true, color: { argb: style.border } };
+  value.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  if (fill) value.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+  value.border = { top: { style: 'medium', color: { argb: style.border } }, bottom: { style: 'medium', color: { argb: style.border } }, left: { style: 'thin', color: { argb: style.border } }, right: { style: 'medium', color: { argb: style.border } } };
+  value.numFmt = '"₪" #,##0.00;[Red]-"₪" #,##0.00';
 }
 
 async function buildWorkbook(model: CanonicalExportModel, language: ExportLanguage): Promise<ExcelJS.Workbook> {

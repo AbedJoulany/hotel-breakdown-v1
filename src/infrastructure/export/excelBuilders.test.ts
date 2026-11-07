@@ -38,14 +38,17 @@ describe('Excel builders', () => {
     const workbook = await buildHebrewWorkbook({ ...baseModel, nights: [{ ...baseModel.nights[0], roomCharges: [{ ...baseModel.nights[0].roomCharges[0], currency: 'ILS', groupingKey: { ...baseModel.nights[0].roomCharges[0].groupingKey, currency: 'ILS' } }] }] });
     const sheet = workbook.worksheets[0];
     expect(sheet.views[0].rightToLeft).toBe(true);
-    expect(sheet.getCell('F12').value).toMatchObject({ formula: expect.stringContaining('ISNUMBER(D12)') });
-    expect(sheet.getCell('G12').value).toMatchObject({ formula: expect.stringContaining('18%') });
-    expect(sheet.getCell('H12').value).toMatchObject({ formula: expect.stringContaining('F12+G12') });
-    expect(sheet.getCell('B2').font.name).toBe('Arial');
-    expect((sheet.getCell('B10').fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FFC0C0C0');
-    expect((sheet.getCell('B11').fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FFFF8080');
-    expect((sheet.getCell('B13').fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FFFF99CC');
-    expect((sheet.getCell('H15').fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FFFFFF00');
+    expect(sheet.getCell('F16').value).toMatchObject({ formula: expect.stringContaining('ISNUMBER(C16)') });
+    expect(sheet.getCell('F18').value).toMatchObject({ formula: expect.stringContaining('18%') });
+    expect(sheet.getCell('F19').value).toMatchObject({ formula: expect.stringContaining('F17+F18') });
+    expect(sheet.getCell('B6').font.name).toBe('Arial');
+    expect((sheet.getCell('B14').fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FFC0C0C0');
+    expect((sheet.getCell('B15').fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FFFF8080');
+    expect((sheet.getCell('B17').fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FFFF99CC');
+    expect((sheet.getCell('F19').fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FFFFFF00');
+    expect(sheet.getCell('C8').isMerged).toBe(true);
+    expect(sheet.getCell('B14').isMerged).toBe(true);
+    expect(sheet.pageSetup.printArea).toBe('A1:G24');
   });
 
   it('preserves formulas and one-sheet structure after xlsx serialization', async () => {
