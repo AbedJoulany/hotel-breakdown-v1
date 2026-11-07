@@ -79,8 +79,8 @@ Last reviewed: 2026-11-06
 
 ### DEC-010 - Missing prices and Final/Draft behavior
 
-- **Status:** Approved; not implemented
-- **Decision:** A missing required price is `Missing Price`, never zero. It blocks `Final` export but may appear in a clearly labelled `Draft` with the missing values shown.
+- **Status:** Superseded by DEC-017
+- **Decision:** A missing required price is `Missing Price`, never zero. The earlier rule that missing prices block `Final` export is no longer active. Missing values remain visible as warnings for both Draft and Final Export.
 - **Reason:** Preserve financial correctness and make incomplete data visible.
 
 ### DEC-011 - Decimal arithmetic, rounding, and currencies
@@ -125,6 +125,40 @@ Last reviewed: 2026-11-06
 - **Status:** Approved for later implementation; export behavior not implemented
 - **Decision:** Validation must continue detecting financial and Folio warnings, but those warnings must not block either Draft Export or Final Export. When Final Export is implemented, it must download immediately without a confirmation dialog or an additional `Export Anyway` action. Missing values remain missing and must be displayed as warnings rather than replaced with zero. This approved policy does not change the current validation code in the placeholder-screen task.
 - **Evidence:** Approved export workflow decision; current warning detection remains in `finalExportValidation.ts` and current export action is not implemented.
+
+### DEC-018 - Excel Export mapping and non-blocking export policy
+
+- **Status:** Approved; not implemented
+- **Decision:** Record the following approved Excel Export rules for later implementation:
+  - Use `Booked Room Type`, not `Actual Room Type`, for Excel grouping.
+  - Use `src/domain/rooms/roomTypes.ts` as the authoritative room-type catalog.
+  - Use standardized Hebrew room names in `Master Hebrew.xlsx` and standardized English room names in `Master $.xlsx`.
+  - Existing template labels are not authoritative.
+  - Display room type and occupancy together in one description column.
+  - Support exactly these occupancy combinations, in this order: `1/0 = Single`, `2/0 = Double`, `3/0 = Triple`, `1/1 = Single + Child`, `2/1 = Double + Child`, and `2/2 = Double + 2 Children`.
+  - Keep all other or missing occupancy combinations as `Unresolved`, displayed in the corresponding room-type rows after the six supported categories.
+  - Create a separate section for every `Report Date`, sort dates oldest to newest, and never combine different dates.
+  - Display only room types and occupancy categories used on each date.
+  - Order room types according to `roomTypes.ts` and occupancy categories according to the six-category sequence above.
+  - Set `Nights = 1` for every room-charge row.
+  - Aggregate by `Report Date + Booked Room Type + Occupancy Category + Rate + Currency`.
+  - Count each unique room once per date. Rates remain per room-night, not per guest.
+  - Use the applicable date-specific pricing rule; different rates remain separate.
+  - Show a subtotal for each date and overall room-charge totals.
+  - For `Master Hebrew.xlsx`, enter room rates before VAT, calculate 18% VAT for each night, and show nightly and overall totals before VAT, VAT amounts, and totals including VAT.
+  - For `Master $.xlsx`, do not add VAT to room charges and do not perform automatic currency conversion.
+  - Keep `Unresolved`, `Pricing Conflict`, and `Missing Price` visible. Leave unresolved rates and monetary totals blank, never zero.
+  - Display warnings on the Excel Export screen. Warnings must not block Draft or Final Export.
+  - When implemented, Final Export downloads immediately without an additional confirmation dialog.
+- **Reason:** Preserve the approved room, occupancy, date, pricing, VAT, currency, and warning behavior while keeping the export implementation explicit and auditable.
+- **Deferred:** The following are not approved implementation requirements in this decision:
+  - An approval button or approval-state behavior.
+  - Duplicate-room conflict presentation in Excel.
+  - Complimentary & Staff mapping and calculations.
+  - Additional Charges mapping and calculations.
+  - Mixed-currency handling in the USD template.
+  - Structural changes to the Excel templates or relocation of existing formulas.
+- **Evidence:** User-approved Excel Export decisions; existing template inspection remains structural evidence only and Excel export is not implemented.
 
 ## Proposed decisions
 
