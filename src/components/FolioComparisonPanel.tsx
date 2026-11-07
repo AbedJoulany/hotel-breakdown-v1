@@ -146,4 +146,3 @@ function FolioComparisonRow({ result }: { result: FolioStayComparisonResult }) {
 }
 
 export default FolioComparisonPanel;
-

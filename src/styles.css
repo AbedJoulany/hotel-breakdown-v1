@@ -986,4 +986,124 @@ h1 {
     justify-content: space-between;
   }
 }
+.export-screen {
+  display: block;
+}
 
+.export-language-switcher {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.export-language-switcher label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted-text);
+  font-size: 0.82rem;
+}
+
+.export-language-switcher select,
+.export-table input {
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: #fff;
+  color: var(--ink);
+  padding: 0.5rem 0.6rem;
+}
+
+.export-preview-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.export-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.export-validation,
+.export-total-card,
+.export-issues,
+.export-night {
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  margin-top: 1rem;
+  padding: 0.85rem;
+}
+
+.export-validation {
+  font-weight: 700;
+}
+
+.export-validation.ready {
+  background: #ecfdf5;
+  color: #166534;
+}
+
+.export-validation.blocked {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.export-issues {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.export-total-card {
+  display: flex;
+  justify-content: space-between;
+  background: #f8fafc;
+}
+
+.export-night h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.export-table {
+  overflow-x: auto;
+}
+
+.export-table-row {
+  display: grid;
+  grid-template-columns: minmax(14rem, 2fr) 5rem 7rem 5rem 10rem 7rem;
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 700px;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.export-table-header {
+  color: var(--muted-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.export-table-row.incomplete {
+  background: #fffbeb;
+}
+
+.export-row-status {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.export-row-status.resolved { color: #166534; }
+.export-row-status.missing-price,
+.export-row-status.pricing-conflict { color: #b91c1c; }
+.export-row-status.unresolved { color: #92400e; }
+
+.export-night-total {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  font-weight: 700;
+}

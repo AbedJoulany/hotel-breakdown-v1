@@ -45,4 +45,3 @@ function summarizeGroupDay(
     roomNights: occupancy.occupiedRoomCount,
   };
 }
-

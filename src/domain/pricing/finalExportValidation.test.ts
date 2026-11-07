@@ -23,4 +23,3 @@ describe('validateFinalExport', () => {
     })).toEqual({ canExport: false, blockers: ['financial-validation'] });
   });
 });
-

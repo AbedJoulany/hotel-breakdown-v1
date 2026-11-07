@@ -127,4 +127,3 @@ function formatMinorUnits(minorUnits: bigint): string {
   const fraction = (minorUnits % 100n).toString().padStart(2, '0');
   return `${whole}.${fraction}`;
 }
-

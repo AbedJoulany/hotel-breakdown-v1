@@ -33,4 +33,3 @@ Evidence-based review with severity, reproduction steps, expected vs actual beha
 - No unapproved product decisions presented as approved.
 - Open questions and verification steps are explicit.
 - Documentation updates proposed or applied only within the authorized scope.
-

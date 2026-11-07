@@ -241,4 +241,3 @@ Draft export may be available for incomplete projects when a meaningful workbook
 - Storage quota, failure recovery, and backup format.
 - Exact UI workflow for correcting duplicate-room conflicts.
 - Excel template worksheet and cell mapping.
-

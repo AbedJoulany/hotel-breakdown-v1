@@ -46,4 +46,3 @@ export function buildPriceSuggestions(observations: RateObservation[]): PriceSug
 
   return [...grouped.values()].sort((left, right) => right.occurrenceCount - left.occurrenceCount);
 }
-

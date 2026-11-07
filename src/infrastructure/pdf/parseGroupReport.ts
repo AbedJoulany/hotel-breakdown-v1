@@ -118,4 +118,3 @@ function findReportDate(pages: PdfTextPage[]): string {
 function isRoomNumber(value: string): boolean {
   return /^\d{4}$/.test(value.trim());
 }
-

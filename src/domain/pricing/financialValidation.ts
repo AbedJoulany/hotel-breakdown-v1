@@ -30,4 +30,3 @@ export function validateFinancialSummary(summary: FinancialSummary): FinancialVa
     issues,
   };
 }
-

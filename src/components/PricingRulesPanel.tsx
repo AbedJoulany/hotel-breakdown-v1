@@ -183,4 +183,3 @@ export default function PricingRulesPanel({ analyses, selectedGroupName, rules, 
     </section>
   );
 }
-

@@ -74,4 +74,3 @@ export async function saveWorkspaceSnapshot(snapshot: WorkspaceSnapshot): Promis
     };
   });
 }
-

@@ -33,4 +33,3 @@ Screen specification: purpose, content hierarchy, components, states, interactio
 - No unapproved product decisions presented as approved.
 - Open questions and verification steps are explicit.
 - Documentation updates proposed or applied only within the authorized scope.
-

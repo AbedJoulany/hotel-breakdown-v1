@@ -27,4 +27,3 @@ export async function analyzeGroupReportPdf(data: ArrayBuffer): Promise<Analyzed
     })),
   };
 }
-

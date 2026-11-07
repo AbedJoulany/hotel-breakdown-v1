@@ -20,4 +20,3 @@ export function createProject(input: CreateProjectInput): Project {
     },
   };
 }
-
