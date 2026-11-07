@@ -63,4 +63,3 @@ export async function extractPdfTextPages(data: ArrayBuffer): Promise<PdfTextPag
     await document.destroy();
   }
 }
-

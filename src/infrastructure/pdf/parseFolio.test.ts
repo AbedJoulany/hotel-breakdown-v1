@@ -40,4 +40,3 @@ describe('parseFolio', () => {
     expect(second.entries).toHaveLength(18);
   });
 });
-

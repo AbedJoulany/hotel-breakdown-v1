@@ -64,4 +64,3 @@ describe('calculateFinancialSummary', () => {
     expect(summary.roomConflicts).toEqual([{ reportDate: '2026-10-25', roomNumber: '0524' }]);
   });
 });
-

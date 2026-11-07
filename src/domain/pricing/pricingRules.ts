@@ -54,4 +54,3 @@ export function matchPricingRule(
   }
   return { kind: 'missing-price', context };
 }
-

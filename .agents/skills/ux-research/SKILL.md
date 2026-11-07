@@ -33,4 +33,3 @@ Research questions, assumptions vs observed evidence, proposed tasks, usability 
 - No unapproved product decisions presented as approved.
 - Open questions and verification steps are explicit.
 - Documentation updates proposed or applied only within the authorized scope.
-

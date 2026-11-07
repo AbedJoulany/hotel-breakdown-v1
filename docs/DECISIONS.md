@@ -1,6 +1,6 @@
 # Hotel Breakdown V1 - Decisions
 
-Last reviewed: 2026-11-06
+Last reviewed: 2026-11-07
 
 ## Decision status
 
@@ -23,7 +23,7 @@ Last reviewed: 2026-11-06
 - **Status:** Approved direction; partially implemented
 - **Decision:** Use React, TypeScript, Vite, PDF.js, Vitest, browser storage, precise decimal arithmetic, and ExcelJS as the V1 technology direction. PWA capabilities are a later stabilization concern.
 - **Current implementation:** React, TypeScript, Vite, PDF.js, Vitest, React Testing Library, and jsdom are installed and used.
-- **Not yet implemented:** browser persistence, decimal arithmetic, ExcelJS export, and PWA behavior.
+- **Implemented:** ExcelJS workbook generation and the shared financial calculation layer. Browser persistence and PWA behavior remain future work.
 - **Reason:** The direction supports a local-first browser application while keeping parsing and calculations testable.
 
 ### DEC-003 - Hybrid source architecture
@@ -79,8 +79,8 @@ Last reviewed: 2026-11-06
 
 ### DEC-010 - Missing prices and Final/Draft behavior
 
-- **Status:** Approved; not implemented
-- **Decision:** A missing required price is `Missing Price`, never zero. It blocks `Final` export but may appear in a clearly labelled `Draft` with the missing values shown.
+- **Status:** Superseded by DEC-017
+- **Decision:** A missing required price is `Missing Price`, never zero. The earlier rule that missing prices block `Final` export is no longer active. Missing values remain visible as warnings for both Draft and Final Export.
 - **Reason:** Preserve financial correctness and make incomplete data visible.
 
 ### DEC-011 - Decimal arithmetic, rounding, and currencies
@@ -122,19 +122,65 @@ Last reviewed: 2026-11-06
 
 ### DEC-017 - Folio warning acknowledgment before Final Export
 
-- **Status:** Approved for later implementation; export behavior not implemented
+- **Status:** Superseded by DEC-020
 - **Decision:** Validation must continue detecting financial and Folio warnings, but those warnings must not block either Draft Export or Final Export. When Final Export is implemented, it must download immediately without a confirmation dialog or an additional `Export Anyway` action. Missing values remain missing and must be displayed as warnings rather than replaced with zero. This approved policy does not change the current validation code in the placeholder-screen task.
-- **Evidence:** Approved export workflow decision; current warning detection remains in `finalExportValidation.ts` and current export action is not implemented.
+- **Evidence:** Superseded by the implemented Export Preview and export validation flow in DEC-019 and DEC-020.
+
+### DEC-018 - Excel Export mapping and non-blocking export policy
+
+- **Status:** Superseded by DEC-019 and DEC-020
+- **Decision:** Record the following approved Excel Export rules for later implementation:
+  - Use `Booked Room Type`, not `Actual Room Type`, for Excel grouping.
+  - Use `src/domain/rooms/roomTypes.ts` as the authoritative room-type catalog.
+  - Use standardized Hebrew room names in `Master Hebrew.xlsx` and standardized English room names in `Master $.xlsx`.
+  - Existing template labels are not authoritative.
+  - Display room type and occupancy together in one description column.
+  - Support exactly these occupancy combinations, in this order: `1/0 = Single`, `2/0 = Double`, `3/0 = Triple`, `1/1 = Single + Child`, `2/1 = Double + Child`, and `2/2 = Double + 2 Children`.
+  - Keep all other or missing occupancy combinations as `Unresolved`, displayed in the corresponding room-type rows after the six supported categories.
+  - Create a separate section for every `Report Date`, sort dates oldest to newest, and never combine different dates.
+  - Display only room types and occupancy categories used on each date.
+  - Order room types according to `roomTypes.ts` and occupancy categories according to the six-category sequence above.
+  - Set `Nights = 1` for every room-charge row.
+  - Aggregate by `Report Date + Booked Room Type + Occupancy Category + Rate + Currency`.
+  - Count each unique room once per date. Rates remain per room-night, not per guest.
+  - Use the applicable date-specific pricing rule; different rates remain separate.
+  - Show a subtotal for each date and overall room-charge totals.
+  - For `Master Hebrew.xlsx`, enter room rates before VAT, calculate 18% VAT for each night, and show nightly and overall totals before VAT, VAT amounts, and totals including VAT.
+  - For `Master $.xlsx`, do not add VAT to room charges and do not perform automatic currency conversion.
+  - Keep `Unresolved`, `Pricing Conflict`, and `Missing Price` visible. Leave unresolved rates and monetary totals blank, never zero.
+  - Display warnings on the Excel Export screen. Warnings must not block Draft or Final Export.
+  - When implemented, Final Export downloads immediately without an additional confirmation dialog.
+- **Reason:** Preserve the approved room, occupancy, date, pricing, VAT, currency, and warning behavior while keeping the export implementation explicit and auditable.
+- **Deferred:** The following are not approved implementation requirements in this decision:
+  - An approval button or approval-state behavior.
+  - Duplicate-room conflict presentation in Excel.
+  - Complimentary & Staff mapping and calculations.
+  - Additional Charges mapping and calculations.
+  - Mixed-currency handling in the USD template.
+  - Structural changes to the Excel templates or relocation of existing formulas.
+- **Evidence:** Superseded by the approved from-scratch generated workbook architecture in DEC-019 and DEC-020.
 
 ## Proposed decisions
 
 No additional proposed decision is being recorded in this file. New recommendations must be approved before they become decisions.
 
+### DEC-019 - Canonical export and traceability model
+
+- **Status:** Approved; implemented
+- **Decision:** Export uses an immutable Canonical Export Model built from active reports, pricing rules, and corrections. Grouped rows use temporary opaque IDs, independent grouping keys, lightweight embedded source references, typed rate values, separate data and financial completeness, and structured issues. No persistent source identity or persistence migration is required for V1.
+
+### DEC-020 - Export Preview and financial parity
+
+- **Status:** Approved; implemented
+- **Decision:** The workflow is Workspace → Export Preview → Review/Correct/Validate → Draft or Final Excel Export. Rate edits are session-scoped and do not mutate Pricing Rules or IndexedDB. Preview uses `FinancialCalculator`; Excel builders generate independent guarded formulas tested against shared fixtures.
+- **Final policy:** Draft is allowed with warnings. Final is allowed only when no `final-blocker` issues exist. `Missing Price` and `Pricing Conflict` are final blockers.
+- **Visual fidelity:** Generated workbooks remain scratch-built with ExcelJS, while their fonts, colors, boxed borders, portrait print layout, header metadata, and logo placement follow the inspected Hebrew and USD reference workbooks.
+
 ## Unresolved decisions
 
 ### DEC-U002 - Final Export UI and workbook implementation
 
-Implement the approved Draft/Final warning presentation, template selection, workbook generation, and immediate Final Export download. Numeric tolerance is defined by DEC-016. The non-blocking export policy is approved by DEC-017 but is not implemented yet.
+Resolved by DEC-019 and DEC-020. Unresolved Duplicate Room Conflict and Unresolved Occupancy are Final blockers when they affect report correctness or price determination; native workbook visual QA remains as release verification.
 
 ### DEC-U004 - Persistence schema and storage limits
 
@@ -142,7 +188,7 @@ Define the IndexedDB/Dexie schema, browser quota behavior, recovery behavior, an
 
 ### DEC-U005 - Excel template structure
 
-Finalize the application-to-template field mapping and preserve the approved VAT, currency, missing-value, and fixed-room-row rules during export implementation.
+Resolved by the approved from-scratch workbook architecture in DEC-019 and DEC-020. Reference templates remain visual/business references only.
 
 ### DEC-U006 - Duplicate-room correction workflow
 
@@ -151,4 +197,3 @@ Define how users review and correct material conflicts while preserving the rule
 ## Superseded decisions
 
 None recorded.
-

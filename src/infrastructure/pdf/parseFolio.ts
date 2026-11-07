@@ -109,4 +109,3 @@ function parseFolioDate(value: string): IsoDate | null {
   const year = match[3].length === 2 ? `20${match[3]}` : match[3];
   return `${year}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}` as IsoDate;
 }
-

@@ -51,4 +51,3 @@ export function hasReportForDate(
 ): boolean {
   return reports.some((report) => report.reportDate === reportDate);
 }
-

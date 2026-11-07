@@ -36,4 +36,3 @@ export function applyRoomCorrections(
     return selectedIndex === undefined || selectedIndex === index;
   });
 }
-

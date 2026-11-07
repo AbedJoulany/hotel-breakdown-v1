@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { analyzeGroupReportPdf } from './application/reports/analyzeGroupReportPdf';
 import type { AnalyzedGroupReport } from './application/reports/analyzeGroupReportPdf';
 import { createProject } from './domain/projects/createProject';
@@ -20,6 +20,11 @@ import type { GroupRoomForFolioComparison } from './domain/folio/models';
 import { hashArrayBuffer } from './infrastructure/files/hashArrayBuffer';
 import { loadWorkspaceSnapshot, saveWorkspaceSnapshot } from './infrastructure/storage/workspaceStore';
 import type { FolioWarningAcknowledgement } from './infrastructure/storage/workspaceStore';
+import ExportPreview from './components/ExportPreview';
+import { buildExportData, applyRateOverrides } from './application/export/buildExportData';
+import { validateExport } from './domain/export/exportValidation';
+import type { ExportLanguage } from './domain/export/models';
+import { buildHebrewWorkbook, buildUsdWorkbook, downloadWorkbook } from './infrastructure/export/excelBuilders';
 
 type View = 'home' | 'workspace' | 'folio' | 'complimentary-staff' | 'additional-charges' | 'export';
 type UploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
@@ -45,6 +50,8 @@ function App() {
   const [corrections, setCorrections] = useState<RoomCorrection[]>([]);
   const [correctionHistory, setCorrectionHistory] = useState<RoomCorrection[]>([]);
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [exportLanguage, setExportLanguage] = useState<ExportLanguage>('usd');
+  const [rateOverrides, setRateOverrides] = useState<Map<string, string>>(new Map());
   const [folioWarningAcknowledgement, setFolioWarningAcknowledgement] = useState<FolioWarningAcknowledgement | null>(null);
   const coverage = summarizeReportCoverage(reports);
   const selectedRangeInvalid = Boolean(
@@ -85,6 +92,10 @@ function App() {
     ? calculateFinancialSummary(selectedPricingDays, pricingRules)
     : null;
   const financialValidation = financialSummary ? validateFinancialSummary(financialSummary) : null;
+  const baseExportModel = useMemo(() => project?.selectedGroupName
+    ? buildExportData({ reports, selectedGroupName: project.selectedGroupName, corrections, pricingRules })
+    : null, [reports, project?.selectedGroupName, corrections, pricingRules]);
+  const exportModel = useMemo(() => baseExportModel ? applyRateOverrides(baseExportModel, rateOverrides) : null, [baseExportModel, rateOverrides]);
   const selectedFolioGroupRooms: GroupRoomForFolioComparison[] = project?.selectedGroupName
     ? analyses.flatMap((report) => report.groups
       .filter((group) => groupMatchKey(group.groupName) === groupMatchKey(project.selectedGroupName ?? ''))
@@ -106,6 +117,15 @@ function App() {
     void saveWorkspaceSnapshot({ project, reports, analyses, analysis, corrections, correctionHistory, pricingRules, folioWarningAcknowledgement })
       .catch(() => setError('Could not save the workspace locally.'));
   }, [analysis, analyses, project, reports, corrections, correctionHistory, pricingRules, folioWarningAcknowledgement]);
+
+  useEffect(() => {
+    if (!baseExportModel) return;
+    const validIds = new Set(baseExportModel.nights.flatMap((night) => night.roomCharges.map((row) => row.groupedRowId)));
+    setRateOverrides((current) => {
+      const next = new Map([...current].filter(([id]) => validIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [baseExportModel]);
   function updateReportState(
     nextReports: ActiveReportDocument[],
     nextAnalyses: AnalyzedGroupReport[],
@@ -155,6 +175,20 @@ function App() {
       analyses: nextAnalyses,
       analysis: result.kind === 'ignored-duplicate' ? currentAnalysis : parsed,
     };
+  }
+
+  async function handleExcelExport(final: boolean) {
+    if (!exportModel) return;
+    const validation = validateExport(exportModel);
+    if (final && !validation.canFinal) {
+      setError(`Final Export is blocked by ${validation.finalBlockers.length} unresolved issue(s).`);
+      return;
+    }
+    const workbook = exportLanguage === 'hebrew'
+      ? await buildHebrewWorkbook(exportModel)
+      : await buildUsdWorkbook(exportModel);
+    const suffix = final ? 'final' : 'draft';
+    await downloadWorkbook(workbook, `hotel-breakdown-${suffix}-${exportLanguage}.xlsx`);
   }
 
   async function handleReportUpload(fileList: FileList | null) {
@@ -332,7 +366,7 @@ function App() {
       <main className="app-shell">
         <section
           className="workspace-card"
-          aria-labelledby={view === 'workspace' ? 'workspace-title' : `${view}-screen-title`}
+          aria-labelledby={view === 'workspace' ? 'workspace-title' : view === 'export' ? 'export-preview-title' : `${view}-screen-title`}
         >
           <nav className="screen-navigation" aria-label="Project screens">
             <button
@@ -674,11 +708,23 @@ function App() {
             <p className="placeholder-description">Placeholder screen. Meals and other additional-charge rules will be added later.</p>
             <p className="placeholder-status" role="status">Not implemented yet.</p>
           </section>
-          <section className="placeholder-screen" hidden={view !== 'export'} aria-labelledby="export-screen-title">
-            <p className="eyebrow">Project workspace</p>
-            <h1 id="export-screen-title">Excel Export</h1>
-            <p className="placeholder-description">Placeholder screen. Template selection, validation warnings, and workbook generation will be added later.</p>
-            <p className="placeholder-status" role="status">Not implemented yet.</p>
+          <section className="export-screen" hidden={view !== 'export'} aria-labelledby="export-preview-title">
+            <div className="export-language-switcher">
+              <label>
+                Export language
+                <select value={exportLanguage} onChange={(event) => setExportLanguage(event.target.value as ExportLanguage)}>
+                  <option value="usd">English / USD</option>
+                  <option value="hebrew">עברית / ILS</option>
+                </select>
+              </label>
+            </div>
+            <ExportPreview
+              model={exportModel}
+              language={exportLanguage}
+              rateOverrides={rateOverrides}
+              onRateChange={(groupedRowId, value) => setRateOverrides((current) => new Map(current).set(groupedRowId, value))}
+              onExport={(final) => void handleExcelExport(final)}
+            />
           </section>
         </section>
       </main>
@@ -740,4 +786,3 @@ function formatPricingResult(room: RoomRecord, reportDate: string, rules: Pricin
 }
 
 export default App;
-

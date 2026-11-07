@@ -16,4 +16,3 @@ describe('groupMatchKey', () => {
     expect(groupMatchKey('Orient-Group')).not.toBe(groupMatchKey('Orient Group'));
   });
 });
-

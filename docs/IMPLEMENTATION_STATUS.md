@@ -1,6 +1,6 @@
 # Hotel Breakdown V1 - Implementation Status
 
-Last reviewed: 2026-11-06
+Last reviewed: 2026-11-07
 
 ## Status legend
 
@@ -18,7 +18,7 @@ Last reviewed: 2026-11-06
 - Home screen with `New Project` and `Continue Project` actions.
 - Initial Workspace screen.
 - `Folio Comparison` is available as a separate view within the active project, with navigation back to Workspace and preserved in-memory panel state while switching views.
-- `Complimentary & Staff`, `Additional Charges`, and `Excel Export` are available as placeholder views within the active project; their calculations and export actions are not implemented.
+- `Complimentary & Staff` and `Additional Charges` remain placeholder views. `Excel Export` is implemented as Export Preview with Draft/Final workbook actions.
 - Local PDF file selection from the browser.
 - In-memory project state for the current workspace.
 - Multiple Group Report selection and sequential processing.
@@ -53,7 +53,7 @@ Last reviewed: 2026-11-06
 - Basic room-night totals are calculated for a selected group.
 - Pure pricing-rule contracts and matching results are implemented for one complete `Date + Room Type + Occupancy Band` rule, plus `Pricing Conflict` and `Missing Price`.
 - `Pricing Rules` UI supports manual entry of the single rule shape and displays `Matched`, `Missing Price`, and `Pricing Conflict` statuses.
-- Basic financial summaries calculate matched room-night charges with two-decimal ILS/USD totals; Final Export action, discounts, and additional charges are not implemented.
+- Basic workspace financial summaries remain available; Export Preview uses the shared `FinancialCalculator` for grouped rows, session rate overrides, currencies, precision, and Hebrew VAT.
 - Financial validation reports unresolved room conflicts, pricing conflicts, and missing or invalid prices as blockers through a pure domain contract; no Final export exists yet.
 - Numeric `reportedRate` observations from the selected group are shown as non-binding price suggestions; the user must choose the currency and add them manually. Active pricing rules are persisted in the local workspace snapshot.
 - Group matching uses a safe comparison key that trims and collapses whitespace and ignores letter case while preserving the original display name.
@@ -83,9 +83,9 @@ Last reviewed: 2026-11-06
 - Folio comparison now summarizes one row per room and guest across all selected report dates, summing Group Report nights and amounts before comparing with the Folio amount.
 - Folio amount differences are displayed as review warnings and are not connected to the blocking `Financial Validation` gate.
 - Folio amount comparison uses the approved `0.01` minor-unit tolerance for ILS and USD.
-- The UI records an acknowledgment timestamp and Folio file hash when Folio warnings are reviewed; the connected Final Export action is not implemented.
-- A pure `Final Export` validation contract now combines financial blockers with unacknowledged Folio warnings; no export action is connected yet.
-- The approved future export policy is to display validation warnings without blocking Draft or Final downloads; the current validation contract and export behavior have not been changed to implement that policy.
+- The UI records an acknowledgment timestamp and Folio file hash when Folio warnings are reviewed; Export Preview independently applies the issue severity policy for Draft and Final workbook downloads.
+- A pure `Final Export` validation contract remains available for legacy Folio workflow checks; Export Preview uses structured issues and blocks only `final-blocker` issues.
+- Export Preview displays all issues and prevents Final only for `final-blocker` issues; Draft remains available for review.
 - `Folio nights` is shown as `Not stated` for the inspected layouts because they do not provide a per-room night quantity; account-level Arrival/Departure is not applied to individual rooms.
 - Multiple-upload results summarize added, replaced, and duplicate files.
 - Failed files do not prevent other selected files from being processed.
@@ -94,12 +94,19 @@ Last reviewed: 2026-11-06
 - IndexedDB stores the current project, active report metadata, parsed analyses, active corrections, and correction history locally.
 - `Continue Project` restores the saved workspace state from the same device.
 
-### Excel template inspection
+### Excel export and preview
 
 - The supplied templates were inspected read-only; no workbook was modified.
 - `templates/Master $.xlsx` contains three worksheets, with populated content only on `גיליון1`; its visible structure includes project metadata, repeated room-charge blocks, a USD room total, staff/free rows, and ancillary-cost sections.
 - `templates/Master Hebrew.xlsx` contains one populated worksheet, `גיליון`; its visible structure includes room charges, 18% VAT formulas, staff/free rows, ancillary costs, paid-amount adjustment, and final payable totals.
-- The inspection is structural evidence only. Excel export and workbook mapping are not implemented.
+- `ExportDataBuilder` creates grouped export rows from active reports, corrections, and pricing rules.
+- Canonical rows use temporary grouped IDs, lightweight source references, typed rates, issue severity, and separate data/financial completeness.
+- `FinancialCalculator` supports positive, zero, negative, missing, and textual rates, separate currencies, Hebrew room VAT, and blank dependent totals for incomplete nights.
+- `Export Preview` displays date-grouped rows, editable session-only rates, statuses, warnings, nightly totals, and overall totals without exposing room numbers.
+- Draft export is available with warnings; Final export is disabled when `final-blocker` issues exist.
+- Hebrew and USD workbooks are generated from scratch with one worksheet, independent date sections, formulas, print settings, direction, and the embedded Orient logo asset.
+- Hebrew and USD workbook presentation now follows the inspected reference visual language: language-specific fonts, portrait print layout, reference-like colors, boxed borders, enlarged logo placement, hotel metadata, and no internal preview-check text.
+- Excel export does not copy or populate the supplied reference templates.
 
 ## Verification
 
@@ -112,8 +119,8 @@ npm run build
 
 Observed result:
 
-- 21 test files passed.
-- 64 tests passed.
+- 24 test files passed.
+- 74 tests passed.
 - Production build passed.
 
 - PDF.js may emit `standardFontDataUrl` warnings during tests; these did not fail the test run.
@@ -127,12 +134,9 @@ The following V1 capabilities are agreed requirements but are not implemented ye
 - Independent project report snapshots and saved report collections.
 - Final correction validation and blocking completion while material conflicts remain unresolved.
 - Ambiguous group-name collision detection and user-assisted resolution.
-- Final export action integration using the implemented validation gate.
 - Complimentary discounts and additional charges.
 - Additional currencies beyond ILS/USD and currency conversion.
-- Financial Preview and drill-down warnings.
-- Excel Draft and Final export in English and Hebrew.
-- Approved workbook field mapping for Draft and Final export.
+- Expanded financial Preview drill-down and persistence of session overrides.
 - Full project backup and restore.
 - PWA offline behavior and stabilization work.
 
@@ -144,17 +148,12 @@ These items are recommendations, not completed functionality.
 
 ## Unresolved
 
-- Final Export UI workflow and acknowledgment presentation.
 - Practical browser-storage limits and recovery behavior.
-- The approved application-to-template field mapping and export behavior.
+- Complimentary/Staff and Additional Charges workbook mapping.
 - Final persistence schema and backup file format.
 - Whether and how duplicate-room conflicts should be corrected in the UI.
-- How selected-group room records and `Date + Room Type + Occupancy Band` prices map into the templates' fixed single/double/staff/free rows and repeated room blocks.
-- Whether exported financial values are before or after VAT, and whether the Hebrew template's hardcoded 18% VAT is applicable to all V1 outputs.
-- How the English template's USD room section and ILS ancillary section should map to separate ILS/USD application totals.
-- The meaning and source of the English template's `PM`, `Agent`, `Free`, `vat staff`, and `paid for transaction` fields.
+- Remaining manual-field behavior in the reference templates is out of scope because generated workbooks are built from scratch.
 
 ## Next proposed task
 
-Approve the smallest Draft export mapping after resolving the template questions above; do not implement Final export until its blocking and VAT behavior are explicitly approved.
-
+Review generated workbook layout in a native spreadsheet application; the V1 Final blockers for unresolved Duplicate Room Conflict and Unresolved Occupancy are implemented.

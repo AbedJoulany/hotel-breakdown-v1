@@ -154,14 +154,15 @@ The following boundaries are planned but not implemented:
 - `persistence`: IndexedDB/Dexie adapter and project/report snapshot storage.
 - `financial`: discounts, additional charges, export action, and broader currency support; validation contracts are implemented.
 - `folio`: Folio extraction, totals, room/guest comparison, night aggregation, tolerance, and acknowledgment are implemented for inspected layouts.
-- `export`: ExcelJS Draft and Final workbook generation.
 - `workflow`: project navigation, completion status, acknowledgments, and blocking validation.
 
-### Excel template inspection and proposed mapping
+### Excel template inspection and generated workbook architecture
 
 **Implemented:** The supplied templates were inspected without modification. `Master $.xlsx` has one populated sheet (`גיליון1`) plus two empty sheets and contains metadata, repeated room-charge blocks, a USD room total, staff/free rows, and ancillary-cost sections. `Master Hebrew.xlsx` has one populated sheet (`גיליון`) with room totals, hardcoded 18% VAT formulas, staff/free rows, ancillary costs, paid-amount adjustment, and final payable totals.
 
-**Proposed:** Preserve the existing workbook layout and formulas. Populate metadata from the project and selected report range, populate room-charge input rows from the selected group's derived room-night and pricing results, and leave template total formulas intact. Keep ILS and USD values separate and use the language-specific template layout.
+**Implemented:** The supplied templates remain visual and business references only. New workbooks are generated from scratch with one worksheet, independent date sections, editable rate cells, guarded formulas, dynamic print areas, Hebrew RTL or USD LTR layout, and the verified Orient logo asset.
+
+**Implemented:** `ExportDataBuilder` produces an immutable canonical model with grouped rows, temporary `groupedRowId`, lightweight source references, typed rates, issue severity, separate data/financial completeness, and no authoritative derived monetary totals. `Export Preview` applies session-scoped rate overrides and both preview and Excel export use the same effective model and `FinancialCalculator` rules.
 
 **Unresolved:** The templates' fixed single/double/staff/free categories do not map directly to the application's room-type and occupancy records. VAT inclusion, the English template's mixed USD/ILS sections, and manual fields such as `PM`, `Agent`, `Free`, `vat staff`, and `paid for transaction` require explicit approval before export implementation.
 
@@ -187,7 +188,6 @@ Planned but not currently installed or used:
 
 - Dexie/IndexedDB persistence layer
 - Decimal arithmetic library
-- ExcelJS
 - PWA tooling
 
 ## Known limitations and unresolved decisions
@@ -195,12 +195,11 @@ Planned but not currently installed or used:
 - The parser is tied to the currently inspected report layouts and needs additional layout validation before broader production use.
 - The current snapshot persistence does not retain original PDF binaries, provide backup/restore, or block completion for unresolved conflicts.
 - Pricing-rule precedence is unresolved.
-- Final Export action and workbook mapping are not implemented.
+- Final Export uses the approved issue severity policy; unresolved Duplicate Room Conflict and Unresolved Occupancy policy details remain open.
 - Complimentary discount formula is unresolved.
 - Backup schema and storage-failure behavior are unresolved.
-- Excel templates have been structurally inspected, but their application field mapping and export behavior remain unresolved.
+- Complimentary/Staff and Additional Charges remain outside the implemented workbook sections.
 
 ## Architectural change rule
 
 Any change that moves business logic into UI, adds a backend or external transmission, changes the approved technology direction, or changes a financial invariant requires explicit approval and a corresponding entry in `docs/DECISIONS.md`.
-

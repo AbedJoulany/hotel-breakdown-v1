@@ -1,0 +1,90 @@
+import { describe, expect, it } from 'vitest';
+import { buildExportData, applyRateOverrides } from './buildExportData';
+import type { ActiveReportDocument } from '../../domain/reports/models';
+import type { PricingRule } from '../../domain/pricing/pricingRules';
+
+const room = (roomNumber: string, adults: number | null, children: number | null, bookedRoomType = 'STR') => ({
+  roomNumber,
+  guestName: `Guest ${roomNumber}`,
+  reservationNumber: null,
+  bookedRoomType,
+  actualRoomType: bookedRoomType,
+  blockCode: null,
+  fromDate: null,
+  toDate: null,
+  adults,
+  children,
+  babies: null,
+  rooms: 1,
+  rateCode: null,
+  reportedRate: null,
+});
+
+function report(rooms: ReturnType<typeof room>[], reportDate = '2026-10-24'): ActiveReportDocument {
+  return {
+    id: `report-${reportDate}`,
+    reportDate: reportDate as ActiveReportDocument['reportDate'],
+    originalFileName: `${reportDate}.pdf`,
+    contentHash: `hash-${reportDate}`,
+    groupSnapshots: [{ reportId: `group-${reportDate}`, reportDate: reportDate as ActiveReportDocument['reportDate'], groupName: 'Group A', rooms }],
+  };
+}
+
+const rule = (rate: string, currency: 'ILS' | 'USD' = 'USD'): PricingRule => ({
+  id: `rule-${rate}-${currency}`,
+  reportDate: '2026-10-24',
+  roomType: 'STR',
+  adults: 2,
+  children: 1,
+  rate,
+  currency,
+});
+
+describe('buildExportData', () => {
+  it('counts unique rooms and groups identical room-night facts', () => {
+    const model = buildExportData({
+      reports: [report([room('0524', 2, 1), room('0525', 2, 1)])],
+      selectedGroupName: 'Group A',
+      corrections: [],
+      pricingRules: [rule('100')],
+    });
+
+    expect(model.nights[0].roomCharges).toHaveLength(1);
+    expect(model.nights[0].roomCharges[0]).toMatchObject({ roomCount: 2, rate: { kind: 'numeric', value: '100' }, pricingStatus: 'resolved' });
+    expect(model.nights[0].roomCharges[0].sourceRefs).toHaveLength(2);
+  });
+
+  it('keeps missing price as a final blocker without using zero', () => {
+    const model = buildExportData({ reports: [report([room('0524', 2, 1)])], selectedGroupName: 'Group A', corrections: [], pricingRules: [] });
+    const row = model.nights[0].roomCharges[0];
+    expect(row.rate).toEqual({ kind: 'missing' });
+    expect(row.pricingStatus).toBe('missing-price');
+    expect(row.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'missing-price', severity: 'final-blocker' })]));
+    expect(row.financialCompleteness).toBe('incomplete');
+  });
+
+  it('accepts zero and negative rates and treats unresolved occupancy separately', () => {
+    const zero = buildExportData({ reports: [report([room('0524', 2, 1)])], selectedGroupName: 'Group A', corrections: [], pricingRules: [rule('0')] });
+    const negative = buildExportData({ reports: [report([room('0524', 2, 1)])], selectedGroupName: 'Group A', corrections: [], pricingRules: [rule('-10')] });
+    const unresolved = buildExportData({ reports: [report([room('0524', null, null)])], selectedGroupName: 'Group A', corrections: [], pricingRules: [] });
+    expect(zero.nights[0].roomCharges[0].rate).toEqual({ kind: 'numeric', value: '0' });
+    expect(negative.nights[0].roomCharges[0].rate).toEqual({ kind: 'numeric', value: '-10' });
+    expect(unresolved.nights[0].roomCharges[0].dataCompleteness).toBe('incomplete');
+    expect(unresolved.nights[0].roomCharges[0].issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'unresolved-occupancy', severity: 'final-blocker' })]));
+  });
+
+  it('blocks Final for unresolved duplicate-room conflicts', () => {
+    const conflicting = report([room('0524', 2, 1), { ...room('0524', 3, 1), rooms: 1 }]);
+    const model = buildExportData({ reports: [conflicting], selectedGroupName: 'Group A', corrections: [], pricingRules: [rule('100')] });
+    expect(model.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'duplicate-room-conflict', severity: 'final-blocker' })]));
+  });
+
+  it('allows a temporary numeric rate override without changing the base model', () => {
+    const model = buildExportData({ reports: [report([room('0524', 2, 1)])], selectedGroupName: 'Group A', corrections: [], pricingRules: [] });
+    const rowId = model.nights[0].roomCharges[0].groupedRowId;
+    const effective = applyRateOverrides(model, new Map([[rowId, '125.50']]));
+    expect(model.nights[0].roomCharges[0].pricingStatus).toBe('missing-price');
+    expect(effective.nights[0].roomCharges[0]).toMatchObject({ pricingStatus: 'resolved', rate: { kind: 'numeric', value: '125.5' } });
+    expect(effective.warnings.some((issue) => issue.code === 'missing-price')).toBe(false);
+  });
+});

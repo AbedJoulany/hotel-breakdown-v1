@@ -44,4 +44,3 @@ describe('validateFinancialSummary', () => {
     expect(result.issues).toEqual([{ kind: 'missing-price', count: 1 }]);
   });
 });
-

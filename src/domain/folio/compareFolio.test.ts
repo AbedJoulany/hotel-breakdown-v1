@@ -99,4 +99,3 @@ describe('compareFolioToGroup', () => {
     expect(result[0].status).toBe('amount-mismatch');
   });
 });
-

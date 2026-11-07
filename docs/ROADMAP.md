@@ -1,6 +1,6 @@
 # Hotel Breakdown V1 - Roadmap
 
-Last reviewed: 2026-11-06
+Last reviewed: 2026-11-07
 
 ## Status labels
 
@@ -12,7 +12,7 @@ Last reviewed: 2026-11-06
 
 ## Current position
 
-The report-processing vertical slice is substantially implemented. Financial rules, Folio comparison for inspected layouts, night aggregation, amount tolerance, warning acknowledgment, and the pure Final Export gate are implemented. The supplied Excel templates have been inspected structurally, but Excel export, original-PDF backup, and the connected Final Export action remain future work.
+The report-processing vertical slice and the first Excel export workflow are implemented. Financial rules, Folio comparison for inspected layouts, night aggregation, amount tolerance, Export Preview, session rate overrides, and generated Hebrew/USD workbooks are available. Original-PDF backup and stabilization remain future work.
 
 ### Phase 0 - Planning and documentation
 
@@ -117,24 +117,23 @@ Exit condition: deterministic financial calculations have unit tests for roundin
 - Approved `0.01` amount tolerance and persisted warning acknowledgment.
 - Placeholder screens for `Complimentary & Staff`, `Additional Charges`, and `Excel Export` with shared project navigation.
 
-Remaining work: export workflow behavior and the approved future policy that validation warnings remain visible without blocking Draft or Final downloads.
+Remaining work: visual workbook QA. Unresolved Duplicate Room Conflict and Unresolved Occupancy are classified as Final blockers when emitted by the export model.
 
 Exit condition: Folio remains comparison-only and cannot silently change contract prices or additional charges.
 
 ## Phase 6 - Excel export
 
-**In progress; export implementation has not started**
+**Implemented; remaining review work is limited to native spreadsheet visual QA**
 
 - **Implemented:** inspected `templates/Master $.xlsx` and `templates/Master Hebrew.xlsx` read-only and recorded their worksheets, input areas, formulas, totals, VAT rows, and ancillary sections.
-- **Proposed:** map the application output to the existing template input cells while preserving the template formulas and language-specific layout.
-- Define workbook mapping and output validation.
-- Implement English and Hebrew workbook generation.
-- Implement Draft export.
-- Implement Final export with blocking validation.
-- Implement the approved warning display without blocking Draft or Final downloads.
+- **Implemented:** generate new English and Hebrew workbooks from scratch with one worksheet and dynamic date sections.
+- **Implemented:** Export Preview with session-scoped rate overrides, shared financial calculations, warnings, and Draft/Final actions.
+- **Implemented:** workbook structure, guarded formulas, VAT behavior, currencies, print area, direction, and logo embedding.
+- **Implemented:** reference-aligned fonts, colors, boxed borders, portrait layout, header metadata, logo sizing, and removal of internal preview-check text.
+- **Implemented:** formula assertions, canonical export tests, financial calculator tests, and workbook structure tests.
 - Keep export language independent from currency.
 
-Next proposed task: resolve the open currency, VAT, fixed-row, and manual-field questions, then approve the smallest Draft export mapping.
+Next proposed task: visually review generated workbooks in a native spreadsheet application.
 
 Exit condition: generated workbooks are validated against approved expected values and do not hide unresolved financial information.
 
@@ -178,4 +177,3 @@ Each implementation task must be small enough to review independently and must i
 6. A stop point before the next task.
 
 No phase is considered complete merely because its code exists; its exit condition and relevant tests must be verified.
-

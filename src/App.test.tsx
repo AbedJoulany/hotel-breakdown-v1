@@ -189,7 +189,7 @@ describe('Home', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Complimentary & Staff' }));
     expect(screen.getByRole('heading', { name: 'Complimentary & Staff' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Excel Export' }));
-    expect(screen.getByRole('heading', { name: 'Excel Export' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Export Preview' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Additional Charges' }));
     expect(screen.getByRole('heading', { name: 'Additional Charges' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Folio Comparison' }));
@@ -367,4 +367,3 @@ describe('Home', () => {
     expect(analyzeGroupReportPdf).toHaveBeenCalledTimes(2);
   });
 });
-

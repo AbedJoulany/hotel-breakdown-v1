@@ -158,4 +158,3 @@ function amountsMatchWithinTolerance(groupAmount: string, folioAmount: string): 
 function formatMinorUnits(value: bigint): string {
   return `${value / 100n}.${(value % 100n).toString().padStart(2, '0')}`;
 }
-

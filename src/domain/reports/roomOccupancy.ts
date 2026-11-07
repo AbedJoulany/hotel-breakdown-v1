@@ -83,4 +83,3 @@ export function findRoomConflicts(rooms: RoomRecord[]): RoomConflict[] {
 function unique(values: string[]): string[] {
   return [...new Set(values)];
 }
-

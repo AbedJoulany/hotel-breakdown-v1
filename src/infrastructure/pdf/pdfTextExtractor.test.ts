@@ -15,4 +15,3 @@ describe('extractPdfTextPages', () => {
     expect(pages[0].items.some((item) => item.x > 0 && item.y > 0)).toBe(true);
   });
 });
-

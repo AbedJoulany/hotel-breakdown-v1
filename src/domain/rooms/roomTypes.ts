@@ -6,6 +6,7 @@ export interface RoomType {
 
 export const ROOM_TYPES: readonly RoomType[] = [
   { code: 'STR', en: 'Orient Room', he: 'חדר אוריינט' },
+  { code: 'STRC', en: 'Orient Connecting Room', he: 'חדר אוריינט עם דלת מקשרת' },
   { code: 'SGR', en: 'Orient Garden Room', he: 'חדר אוריינט גן' },
   { code: 'SCR', en: 'Orient Colony City View Room', he: 'חדר אוריינט נוף למושבה' },
   { code: 'SOR', en: 'Orient Old City View Room', he: 'חדר אוריינט נוף לעיר העתיקה' },
@@ -19,7 +20,6 @@ export const ROOM_TYPES: readonly RoomType[] = [
   { code: 'ZPR', en: 'Presidential Suite', he: 'סוויטה נשיאותית' },
   { code: 'ZRR', en: 'Orient Royal Suite', he: 'סוויטת אוריינט רויאל' },
   { code: 'ZER', en: 'Colony Suite', he: 'סוויטת קולוני' },
-  { code: 'STRC', en: 'Orient Connecting Room', he: '' },
 ] as const;
 
 export type RoomTypeCode = (typeof ROOM_TYPES)[number]['code'];
@@ -27,4 +27,3 @@ export type RoomTypeCode = (typeof ROOM_TYPES)[number]['code'];
 export function findRoomType(code: string): RoomType | undefined {
   return ROOM_TYPES.find((roomType) => roomType.code === code);
 }
-

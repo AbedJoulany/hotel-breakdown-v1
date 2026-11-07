@@ -50,4 +50,3 @@ export interface FolioStayComparisonResult {
   currency: SupportedCurrency | null;
   status: FolioComparisonStatus;
 }
-
