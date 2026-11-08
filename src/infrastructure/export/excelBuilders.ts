@@ -29,6 +29,15 @@ const VISUAL_STYLES: Record<ExportLanguage, VisualStyle> = {
   },
 };
 
+const HEBREW_TEMPLATE_STYLE = {
+  columns: { a: 12.7, b: 35.13, c: 13.99, d: 7.14, e: 6.28, f: 22.14, g: 2 },
+  rows: { title: 20.25, draft: 18, metadata: 18.75, section: 16.5, header: 15.75, body: 15.75, wrappedBody: 30 },
+  colors: { section: 'FFC0C0C0', header: 'FFFF8080', beforeVat: 'FFFF99CC', overall: 'FFFFFF00', warning: 'FFFFC7CE', border: 'FF000000' },
+  imageRange: 'B1:D8',
+  print: { left: 0.33, right: 0.48, top: 0.36, bottom: 0.35, header: 0.51, footer: 0.51 },
+  numberFormats: { currency: '"₪" #,##0.00;[Red]-"₪" #,##0.00', integer: '#,##0;[Red]-#,##0' },
+} as const;
+
 export async function buildHebrewWorkbook(model: CanonicalExportModel): Promise<ExcelJS.Workbook> {
   return buildHebrewWorkbookScratch(model);
 }
@@ -59,20 +68,20 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
     views: [{ rightToLeft: true, showGridLines: false }],
     pageSetup: { orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
-  worksheet.pageSetup.margins = { left: 0.33, right: 0.48, top: 0.36, bottom: 0.35, header: 0.22, footer: 0.25 };
+  worksheet.pageSetup.margins = HEBREW_TEMPLATE_STYLE.print;
   worksheet.properties.defaultRowHeight = 15;
   worksheet.columns = [
-    { width: 12.7 },
-    { width: 35.1 },
-    { width: 14 },
-    { width: 7.1 },
-    { width: 6.3 },
-    { width: 22.1 },
-    { width: 2 },
+    { width: HEBREW_TEMPLATE_STYLE.columns.a },
+    { width: HEBREW_TEMPLATE_STYLE.columns.b },
+    { width: HEBREW_TEMPLATE_STYLE.columns.c },
+    { width: HEBREW_TEMPLATE_STYLE.columns.d },
+    { width: HEBREW_TEMPLATE_STYLE.columns.e },
+    { width: HEBREW_TEMPLATE_STYLE.columns.f },
+    { width: HEBREW_TEMPLATE_STYLE.columns.g },
   ];
 
   const logoId = workbook.addImage({ base64: ORIENT_LOGO_DATA_URL, extension: 'jpeg' });
-  worksheet.addImage(logoId, 'B1:D5');
+  worksheet.addImage(logoId, HEBREW_TEMPLATE_STYLE.imageRange);
 
   const labels = {
     title: 'פירוט מלון',
@@ -95,32 +104,36 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
     summary: 'סיכום',
   };
 
-  worksheet.mergeCells('B6:F6');
-  worksheet.getCell('B6').value = labels.title;
-  styleMergedRow(worksheet, 6, 2, 6, styleTitle, style);
-  worksheet.mergeCells('B7:F7');
-  worksheet.getCell('B7').value = labels.draft;
-  styleMergedRow(worksheet, 7, 2, 6, styleDraft, style);
+  worksheet.mergeCells('B9:F9');
+  worksheet.getCell('B9').value = labels.title;
+  worksheet.getRow(9).height = HEBREW_TEMPLATE_STYLE.rows.title;
+  styleMergedRow(worksheet, 9, 2, 6, styleTitle, style);
+  worksheet.mergeCells('B10:F10');
+  worksheet.getCell('B10').value = labels.draft;
+  worksheet.getRow(10).height = HEBREW_TEMPLATE_STYLE.rows.draft;
+  styleMergedRow(worksheet, 10, 2, 6, styleDraft, style);
 
-  writeHebrewMetadataRow(worksheet, 8, labels.group, model.metadata.groupName ?? '—', style);
-  writeHebrewMetadataRow(worksheet, 9, labels.hotel, model.metadata.hotelName ?? '—', style);
-  writeHebrewMetadataRow(worksheet, 10, labels.dates, model.metadata.reportDates.join(', '), style);
-  writeHebrewMetadataRow(worksheet, 11, labels.currency, 'ILS', style);
-  worksheet.getCell('B12').value = labels.checkIn;
-  worksheet.getCell('C12').value = model.metadata.checkInDate ?? '—';
-  worksheet.getCell('D12').value = labels.checkOut;
-  worksheet.getCell('E12').value = model.metadata.checkOutDate ?? '—';
-  styleMetadataLabel(worksheet.getCell('B12'), style);
-  styleMetadataValue(worksheet.getCell('C12'), style);
-  styleMetadataLabel(worksheet.getCell('D12'), style);
-  styleMetadataValue(worksheet.getCell('E12'), style);
+  writeHebrewMetadataRow(worksheet, 12, labels.group, model.metadata.groupName ?? '—', style);
+  writeHebrewMetadataRow(worksheet, 13, labels.hotel, model.metadata.hotelName ?? '—', style);
+  writeHebrewMetadataRow(worksheet, 14, labels.dates, model.metadata.reportDates.join(', '), style);
+  writeHebrewMetadataRow(worksheet, 15, labels.currency, 'ILS', style);
+  worksheet.getCell('B16').value = labels.checkIn;
+  worksheet.getCell('C16').value = model.metadata.checkInDate ?? '—';
+  worksheet.getCell('D16').value = labels.checkOut;
+  worksheet.getCell('E16').value = model.metadata.checkOutDate ?? '—';
+  styleMetadataLabel(worksheet.getCell('B16'), style);
+  styleMetadataValue(worksheet.getCell('C16'), style);
+  styleMetadataLabel(worksheet.getCell('D16'), style);
+  styleMetadataValue(worksheet.getCell('E16'), style);
+  worksheet.getRow(16).height = HEBREW_TEMPLATE_STYLE.rows.metadata;
 
-  let row = 14;
+  let row = 18;
   const nightlyBeforeRefs: string[] = [];
   const nightlyVatRefs: string[] = [];
   for (const night of model.nights) {
     worksheet.mergeCells(`B${row}:F${row}`);
     worksheet.getCell(`B${row}`).value = `${labels.section} · ${night.reportDate}`;
+    worksheet.getRow(row).height = HEBREW_TEMPLATE_STYLE.rows.section;
     styleMergedRow(worksheet, row, 2, 6, styleSection, style);
     row += 1;
 
@@ -130,6 +143,7 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
       cell.value = value;
       styleHeader(cell, style, index === 0, index === headers.length - 1);
     });
+    worksheet.getRow(row).height = HEBREW_TEMPLATE_STYLE.rows.header;
     row += 1;
 
     const firstDetailRow = row;
@@ -146,7 +160,7 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
     writeHebrewTotalRow(worksheet, vatRow, labels.vat, `=IF(F${beforeVatRow}="","",F${beforeVatRow}*18%)`, undefined, style);
     row += 1;
     const includingVatRow = row;
-    writeHebrewTotalRow(worksheet, includingVatRow, labels.includingVat, `=IF(F${beforeVatRow}="","",F${beforeVatRow}+F${vatRow})`, style.grandTotalFill, style);
+    writeHebrewTotalRow(worksheet, includingVatRow, labels.includingVat, `=IF(F${beforeVatRow}="","",F${beforeVatRow}+F${vatRow})`, HEBREW_TEMPLATE_STYLE.colors.header, style);
     nightlyBeforeRefs.push(`F${beforeVatRow}`);
     nightlyVatRefs.push(`F${vatRow}`);
     row += 2;
@@ -171,13 +185,14 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
   writeHebrewTotalRow(worksheet, overallVatRow, labels.vat, overallVatFormula, undefined, style);
   row += 1;
   const overallIncludingVatRow = row;
-  writeHebrewTotalRow(worksheet, overallIncludingVatRow, labels.includingVat, `=IF(F${overallBeforeVatRow}="","",F${overallBeforeVatRow}+F${overallVatRow})`, style.grandTotalFill, style);
+  writeHebrewTotalRow(worksheet, overallIncludingVatRow, labels.includingVat, `=IF(F${overallBeforeVatRow}="","",F${overallBeforeVatRow}+F${overallVatRow})`, HEBREW_TEMPLATE_STYLE.colors.overall, style);
 
   worksheet.pageSetup.printArea = `A1:G${overallIncludingVatRow}`;
   return workbook;
 }
 
 function writeHebrewMetadataRow(worksheet: ExcelJS.Worksheet, row: number, label: string, value: string, style: VisualStyle) {
+  worksheet.getRow(row).height = HEBREW_TEMPLATE_STYLE.rows.metadata;
   worksheet.getCell(`B${row}`).value = label;
   worksheet.mergeCells(`C${row}:F${row}`);
   worksheet.getCell(`C${row}`).value = value;
@@ -202,11 +217,18 @@ function writeHebrewChargeRow(worksheet: ExcelJS.Worksheet, row: number, charge:
       right: { style: column === 6 ? 'medium' : 'thin', color: { argb: style.border } },
     };
   }
+  worksheet.getRow(row).height = String(worksheet.getCell(`B${row}`).value ?? '').length > 28
+    ? HEBREW_TEMPLATE_STYLE.rows.wrappedBody
+    : HEBREW_TEMPLATE_STYLE.rows.body;
   if (charge.financialCompleteness === 'incomplete') worksheet.getCell(`B${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.warningFill } };
-  for (const column of ['C', 'D', 'E', 'F']) worksheet.getCell(`${column}${row}`).numFmt = '"₪" #,##0.00;[Red]-"₪" #,##0.00';
+  worksheet.getCell(`C${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+  worksheet.getCell(`D${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.integer;
+  worksheet.getCell(`E${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.integer;
+  worksheet.getCell(`F${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
 }
 
 function writeHebrewTotalRow(worksheet: ExcelJS.Worksheet, row: number, label: string, formula: string, fill: string | undefined, style: VisualStyle) {
+  worksheet.getRow(row).height = HEBREW_TEMPLATE_STYLE.rows.body;
   worksheet.mergeCells(`B${row}:E${row}`);
   worksheet.getCell(`B${row}`).value = label;
   worksheet.getCell(`F${row}`).value = { formula };
@@ -222,7 +244,7 @@ function writeHebrewTotalRow(worksheet: ExcelJS.Worksheet, row: number, label: s
   value.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
   if (fill) value.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
   value.border = { top: { style: 'medium', color: { argb: style.border } }, bottom: { style: 'medium', color: { argb: style.border } }, left: { style: 'thin', color: { argb: style.border } }, right: { style: 'medium', color: { argb: style.border } } };
-  value.numFmt = '"₪" #,##0.00;[Red]-"₪" #,##0.00';
+  value.numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
 }
 
 async function buildWorkbook(model: CanonicalExportModel, language: ExportLanguage): Promise<ExcelJS.Workbook> {
