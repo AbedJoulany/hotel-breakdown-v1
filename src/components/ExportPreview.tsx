@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import type { CanonicalExportModel, CanonicalAdditionalChargeRow, CanonicalComplimentaryStaffRow, CanonicalRoomChargeRow } from '../domain/export/models';
+import { exportTargetCurrency, type CanonicalExportModel, type CanonicalAdditionalChargeRow, type CanonicalComplimentaryStaffRow, type CanonicalRoomChargeRow } from '../domain/export/models';
 import { validateExport } from '../domain/export/exportValidation';
 import { calculateFinancialPreview } from '../domain/pricing/financialCalculator';
 import type { ExportLanguage } from '../domain/export/models';
@@ -11,16 +11,18 @@ interface ExportPreviewProps {
   rateOverrides: ReadonlyMap<string, string>;
   onRateChange: (groupedRowId: string, value: string) => void;
   onExport: (final: boolean) => void;
+  folioComparisonComplete: boolean;
 }
 
-export default function ExportPreview({ model, language, rateOverrides, onRateChange, onExport }: ExportPreviewProps) {
+export default function ExportPreview({ model, language, rateOverrides, onRateChange, onExport, folioComparisonComplete }: ExportPreviewProps) {
   if (!model) {
     return <p className="muted">Select a group and upload reports before opening Export Preview.</p>;
   }
 
-  const validation = validateExport(model, language);
+  const validation = validateExport(model, language, folioComparisonComplete);
   const financial = calculateFinancialPreview(model, language);
-  const totals = financial.totals[language === 'hebrew' ? 'ILS' : 'USD'];
+  const targetCurrency = exportTargetCurrency(language);
+  const totals = financial.totals[targetCurrency];
   return (
     <section className="export-preview" aria-labelledby="export-preview-title">
       <div className="export-preview-heading">
@@ -35,7 +37,11 @@ export default function ExportPreview({ model, language, rateOverrides, onRateCh
         </div>
       </div>
       <div className={`export-validation ${validation.canFinal ? 'ready' : 'blocked'}`} role="status">
-        {validation.canFinal ? 'Ready for Final Export.' : `${validation.finalBlockers.length} issue(s) must be resolved before Final Export.`}
+        {!folioComparisonComplete
+          ? 'Complete Folio Comparison before exporting.'
+          : validation.canFinal
+            ? 'Ready for Final Export.'
+            : `${validation.finalBlockers.length} issue(s) must be resolved before Final Export.`}
       </div>
       {validation.issues.length > 0 && (
         <ul className="export-issues" aria-label="Export issues">
@@ -44,7 +50,7 @@ export default function ExportPreview({ model, language, rateOverrides, onRateCh
       )}
       <div className="export-total-card">
         <span>{language === 'hebrew' ? 'סה״כ כולל מע״מ' : 'Overall total'}</span>
-        <strong>{totals ?? '—'} {language === 'hebrew' ? 'ILS' : 'USD'}</strong>
+        <strong>{totals ?? '—'} {targetCurrency}</strong>
       </div>
       {model.nights.map((night) => (
         <section className="export-night" key={night.reportDate} aria-labelledby={`export-night-${night.reportDate}`}>
@@ -56,7 +62,7 @@ export default function ExportPreview({ model, language, rateOverrides, onRateCh
             {night.roomCharges.map((row) => (
               <PreviewRow key={row.groupedRowId} row={row} language={language} override={rateOverrides.get(row.groupedRowId)} onRateChange={onRateChange} amount={financial.rows.find((item) => item.groupedRowId === row.groupedRowId)?.amount ?? null} />
             ))}
-            <div className="export-night-total"><span>Nightly total</span><strong>{financial.nightlyTotals[night.reportDate]?.[language === 'hebrew' ? 'ILS' : 'USD'] ?? '—'}</strong></div>
+            <div className="export-night-total"><span>Nightly total</span><strong>{financial.nightlyTotals[night.reportDate]?.[targetCurrency] ?? '—'} {targetCurrency}</strong></div>
           </div>
         </section>
       ))}

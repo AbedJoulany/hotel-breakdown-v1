@@ -1,4 +1,4 @@
-import type { ExportLanguage } from '../export/models';
+import { exportTargetCurrency, type ExportLanguage } from '../export/models';
 import type { CanonicalExportModel, CanonicalRoomChargeRow } from '../export/models';
 import type { SupportedCurrency } from './pricingRules';
 
@@ -16,6 +16,7 @@ export interface FinancialPreview {
 }
 
 export function calculateFinancialPreview(model: CanonicalExportModel, language: ExportLanguage): FinancialPreview {
+  const targetCurrency = exportTargetCurrency(language);
   const rows: FinancialRowResult[] = [];
   const nightlyTotals: Record<string, Record<SupportedCurrency, string | null>> = {};
   const totals: Record<SupportedCurrency, string | null> = { ILS: '0', USD: '0' };
@@ -24,7 +25,7 @@ export function calculateFinancialPreview(model: CanonicalExportModel, language:
     const nightIncomplete = night.financialCompleteness === 'incomplete';
     const nightValues: Record<SupportedCurrency, string | null> = { ILS: nightIncomplete ? null : '0', USD: nightIncomplete ? null : '0' };
     for (const row of night.roomCharges) {
-      const amount = row.financialCompleteness === 'complete' && row.currency && row.rate.kind === 'numeric'
+      const amount = row.financialCompleteness === 'complete' && row.currency === targetCurrency && row.rate.kind === 'numeric'
         ? multiplyDecimal(row.rate.value, row.roomCount * row.nights, language === 'hebrew' && row.currency === 'ILS' ? '1.18' : '1')
         : null;
       rows.push({ groupedRowId: row.groupedRowId, amount });
@@ -40,11 +41,11 @@ export function calculateFinancialPreview(model: CanonicalExportModel, language:
   }
 
   const additionalRows = (model.additionalCharges ?? []).map((row) => {
-    const amount = row.financialCompleteness === 'complete' && row.currency === (language === 'hebrew' ? 'ILS' : 'USD')
+    const amount = row.financialCompleteness === 'complete' && row.currency === targetCurrency
       && row.price.kind === 'numeric' && row.quantity.kind === 'numeric' && row.number.kind === 'numeric'
       ? multiplyDecimal(row.price.value, Number(row.quantity.value) * Number(row.number.value), language === 'hebrew' && row.currency === 'ILS' ? '1.18' : '1')
       : null;
-    if (row.currency === (language === 'hebrew' ? 'ILS' : 'USD')) {
+    if (row.currency === targetCurrency) {
       if (amount === null) totals[row.currency] = null;
       else if (totals[row.currency] !== null) totals[row.currency] = addDecimal(totals[row.currency]!, amount);
     }
@@ -52,13 +53,12 @@ export function calculateFinancialPreview(model: CanonicalExportModel, language:
   });
 
   const complimentaryStaffRows = (model.complimentaryStaff ?? []).map((row) => {
-    const amount = row.completeness === 'complete' && row.currency === (language === 'hebrew' ? 'ILS' : 'USD')
+    const amount = row.completeness === 'complete' && row.currency === targetCurrency
       && row.amount.kind === 'numeric' && row.number.kind === 'numeric'
       ? multiplyDecimal(row.amount.value, Number(row.number.value), language === 'hebrew' && row.currency === 'ILS' ? '1.18' : '1')
       : null;
-    if (row.currency === (language === 'hebrew' ? 'ILS' : 'USD')) {
-      if (amount === null) totals[row.currency] = null;
-      else if (totals[row.currency] !== null) totals[row.currency] = addDecimal(totals[row.currency]!, amount);
+    if (amount !== null && language === 'hebrew' && row.currency === 'ILS' && totals.ILS !== null) {
+      totals.ILS = addDecimal(totals.ILS, amount);
     }
     return { groupedRowId: `complimentary-staff:${row.id}`, amount };
   });

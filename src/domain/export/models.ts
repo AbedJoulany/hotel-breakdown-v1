@@ -5,7 +5,11 @@ import type { RoomCorrection } from '../reports/roomCorrections';
 import type { ActiveReportDocument } from '../reports/models';
 import type { IsoDate } from '../shared/types';
 
-export type ExportLanguage = 'hebrew' | 'usd';
+export type ExportLanguage = 'hebrew' | 'usd' | 'english-ils';
+
+export function exportTargetCurrency(language: ExportLanguage): SupportedCurrency {
+  return language === 'usd' ? 'USD' : 'ILS';
+}
 export type IssueSeverity = 'info' | 'warning' | 'final-blocker';
 export type IssueAffects = 'data' | 'financial' | 'presentation';
 export type PricingStatus = 'resolved' | 'missing-price' | 'pricing-conflict' | 'unresolved';

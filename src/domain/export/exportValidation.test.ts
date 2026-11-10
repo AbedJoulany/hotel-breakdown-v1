@@ -21,4 +21,13 @@ describe('validateExport', () => {
     ]));
     expect(result.canFinal).toBe(true);
   });
+
+  it('blocks Draft and Final until Folio Comparison is complete', () => {
+    const result = validateExport(model, 'usd', false);
+    expect(result.canDraft).toBe(false);
+    expect(result.canFinal).toBe(false);
+    expect(result.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'folio-comparison-required', severity: 'warning' }),
+    ]));
+  });
 });

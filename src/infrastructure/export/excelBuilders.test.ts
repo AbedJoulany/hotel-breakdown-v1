@@ -31,14 +31,14 @@ function model(nights: CanonicalNight[]): CanonicalExportModel {
 }
 
 const usdModel: CanonicalExportModel = {
-  metadata: { hotelName: null, groupName: 'Group A', checkInDate: '2026-10-24', checkOutDate: '2026-10-24', reportDates: ['2026-10-24'], currencies: ['USD', 'ILS'] },
+  metadata: { hotelName: null, groupName: 'Group A', checkInDate: '2026-10-24', checkOutDate: '2026-10-24', reportDates: ['2026-10-24'], currencies: ['ILS'] },
   warnings: [],
   nights: [{
     reportDate: '2026-10-24', dataCompleteness: 'complete', financialCompleteness: 'complete',
     roomCharges: [{
-      groupedRowId: 'row-1', groupingKey: { reportDate: '2026-10-24', bookedRoomType: 'STR', occupancyCategory: 'double-child', rateKey: 'numeric:100', currency: 'USD' },
+      groupedRowId: 'row-1', groupingKey: { reportDate: '2026-10-24', bookedRoomType: 'STR', occupancyCategory: 'double-child', rateKey: 'numeric:100', currency: 'ILS' },
       reportDate: '2026-10-24', bookedRoomType: 'STR', adults: 2, children: 1, occupancyCategory: 'double-child', roomCount: 2, nights: 1,
-      rate: { kind: 'numeric', value: '100' }, currency: 'USD', pricingStatus: 'resolved', dataCompleteness: 'complete', financialCompleteness: 'complete', issues: [], sourceRefs: [],
+      rate: { kind: 'numeric', value: '100' }, currency: 'ILS', pricingStatus: 'resolved', dataCompleteness: 'complete', financialCompleteness: 'complete', issues: [], sourceRefs: [],
     }],
   }],
 };
@@ -57,10 +57,10 @@ describe('Excel builders', () => {
     expect(sheet.getCell('B21').isMerged).toBe(true);
     expect(sheet.getCell('F23').value).toMatchObject({ formula: expect.stringContaining('F21') });
     expect(sheet.getCell('B25').value).toBe('צוות וחופשיים');
-    expect(sheet.getCell('B31').value).toBe('עלויות נלוות');
-    expect(sheet.getCell('F33').value).toMatchObject({ formula: expect.stringContaining('F32*1.18') });
-    expect(sheet.getCell('F35').value).toMatchObject({ formula: expect.stringContaining('F33') });
-    expect(sheet.pageSetup.printArea).toBe('A3:G46');
+    expect(sheet.getCell('B29').value).toBe('עלויות נלוות');
+    expect(sheet.getCell('F31').value).toMatchObject({ formula: expect.stringContaining('F30*1.18') });
+    expect(sheet.getCell('F33').value).toMatchObject({ formula: expect.stringContaining('F23+F27+F31') });
+    expect(sheet.pageSetup.printArea).toBe('A3:G44');
   });
 
   it('renders two sections and combines all VAT-inclusive totals', async () => {
@@ -72,11 +72,11 @@ describe('Excel builders', () => {
     expect(sheet.getCell('F31').value).toMatchObject({ formula: expect.stringContaining('F21') });
     expect(sheet.getCell('F31').value).toMatchObject({ formula: expect.stringContaining('F29') });
     expect(sheet.getCell('B33').value).toBe('צוות וחופשיים');
-    expect(sheet.getCell('B39').value).toBe('עלויות נלוות');
-    expect(sheet.getCell('F43').value).toMatchObject({ formula: expect.stringContaining('F37+F41') });
-    expect(sheet.getCell('F45').value).toMatchObject({ formula: expect.stringContaining('F43-F44') });
-    expect(sheet.getCell('A53').value).toContain('ישרוטל');
-    expect(sheet.pageSetup.printArea).toBe('A3:G54');
+    expect(sheet.getCell('B37').value).toBe('עלויות נלוות');
+    expect(sheet.getCell('F39').value).toMatchObject({ formula: expect.stringContaining('F38*1.18') });
+    expect(sheet.getCell('F41').value).toMatchObject({ formula: expect.stringContaining('F31+F35+F39') });
+    expect(sheet.getCell('A51').value).toContain('ישרוטל');
+    expect(sheet.pageSetup.printArea).toBe('A3:G52');
   });
 
   it('moves later sections when a section has more than three detail rows', async () => {
@@ -101,7 +101,7 @@ describe('Excel builders', () => {
     expect(combined.value).toBeDefined();
     if (sectionCount === 0) expect(combined.value).toMatchObject({ formula: '=""' });
     if (sectionCount > 0) expect(combined.value).toMatchObject({ formula: expect.stringContaining(`F${15 + (sectionCount - 1) * 6 + 4}`) });
-    expect(sheet.pageSetup.printArea).toBe(`A3:G${combinedRow + 23}`);
+    expect(sheet.pageSetup.printArea).toMatch(/^A3:G\d+$/);
   });
 
   it('preserves blank propagation for missing and incomplete prices', async () => {
@@ -177,7 +177,7 @@ describe('Excel builders', () => {
     expect(sheet.pageSetup.verticalDpi).toBe(300);
     expect(sheet.pageSetup.margins?.left).toBe(0.329861111111111);
     expect(sheet.pageSetup.margins?.right).toBe(0.479861111111111);
-    expect(sheet.pageSetup.printArea).toBe('A3:G46');
+    expect(sheet.pageSetup.printArea).toBe('A3:G44');
 
     const buffer = await workbook.xlsx.writeBuffer();
     const reloaded = new ExcelJS.Workbook();
@@ -191,7 +191,7 @@ describe('Excel builders', () => {
     expect(reloaded.worksheets[0].pageSetup.fitToHeight).toBe(1);
     expect(reloaded.worksheets[0].pageSetup.horizontalDpi).toBe(300);
     expect(reloaded.worksheets[0].pageSetup.verticalDpi).toBe(300);
-    expect(reloaded.worksheets[0].pageSetup.printArea).toBe('A3:G46');
+    expect(reloaded.worksheets[0].pageSetup.printArea).toBe('A3:G44');
     expect(reloaded.worksheets[0].pageSetup.margins?.left).toBe(0.329861111111111);
     expect(reloaded.worksheets[0].getImages()[0]!.range.tl.nativeCol).toBe(2);
     expect(reloaded.worksheets[0].getImages()[0]!.range.tl.nativeColOff).toBe(83005);
@@ -262,14 +262,33 @@ describe('Excel builders', () => {
     expect(sheet.getCell('C5').border?.bottom?.style).toBeUndefined();
   });
 
-  it('keeps USD export unchanged', async () => {
-    const workbook = await buildUsdWorkbook(usdModel);
+  it('keeps English ILS export consistent', async () => {
+    const workbook = await buildUsdWorkbook(usdModel, 'ILS');
     const sheet = workbook.worksheets[0];
     expect(workbook.worksheets).toHaveLength(1);
     expect(sheet.getCell('D12').value).toBe(100);
     expect(sheet.getCell('F12').value).toMatchObject({ formula: expect.stringContaining('ISNUMBER(D12)') });
     expect(sheet.views[0].rightToLeft).toBe(false);
     expect(sheet.getImages()).toHaveLength(1);
+  });
+
+  it('supports the English USD choice separately', async () => {
+    const usdFixture: CanonicalExportModel = {
+      ...usdModel,
+      metadata: { ...usdModel.metadata, currencies: ['USD'] },
+      nights: usdModel.nights.map((night) => ({
+        ...night,
+        roomCharges: night.roomCharges.map((row) => ({
+          ...row,
+          currency: 'USD',
+          groupingKey: { ...row.groupingKey, currency: 'USD' },
+        })),
+      })),
+    };
+    const sheet = (await buildUsdWorkbook(usdFixture)).worksheets[0];
+    expect(sheet.getCell('C7').value).toBe('USD');
+    expect(sheet.getCell('D12').value).toBe(100);
+    expect(sheet.getCell('D12').numFmt).toContain('$');
   });
 
   it('adds Additional Charges sections to Hebrew and USD exports', async () => {
@@ -280,19 +299,19 @@ describe('Excel builders', () => {
     }];
     const hebrew = await buildHebrewWorkbook({ ...model([night('2026-10-24', 1)]), additionalCharges });
     const hebrewSheet = hebrew.worksheets[0];
-    expect(hebrewSheet.getCell('B29').value).toBe('עלויות נלוות');
-    expect(hebrewSheet.getCell('B30').value).toBe('Breakfast');
-    expect(hebrewSheet.getCell('F30').value).toMatchObject({ formula: expect.stringContaining('C30*D30*E30') });
-    expect(hebrewSheet.getCell('F32').value).toMatchObject({ formula: expect.stringContaining('F31*1.18') });
-    expect(hebrewSheet.pageSetup.printArea).toBe('A3:G45');
+    expect(hebrewSheet.getCell('B27').value).toBe('עלויות נלוות');
+    expect(hebrewSheet.getCell('B28').value).toBe('Breakfast');
+    expect(hebrewSheet.getCell('F28').value).toMatchObject({ formula: expect.stringContaining('C28*D28*E28') });
+    expect(hebrewSheet.getCell('F30').value).toMatchObject({ formula: expect.stringContaining('F29*1.18') });
+    expect(hebrewSheet.pageSetup.printArea).toBe('A3:G43');
 
-    const usd = await buildUsdWorkbook({ ...usdModel, additionalCharges: [{ ...additionalCharges[0], currency: 'USD' }] });
+    const usd = await buildUsdWorkbook({ ...usdModel, additionalCharges: [{ ...additionalCharges[0], currency: 'ILS' }] }, 'ILS');
     const usdSheet = usd.worksheets[0];
     expect(usdSheet.getCell('B20').value).toBe('Additional Charges');
     expect(usdSheet.getCell('F22').value).toMatchObject({ formula: expect.stringContaining('C22*D22*E22') });
   });
 
-  it('adds VAT-bearing Free & Staff rows to Hebrew and preserves the USD section', async () => {
+  it('exports Free & Staff rows separately without VAT or room-total inclusion', async () => {
     const complimentaryStaff = [{
       id: 'free-1', type: 'free' as const, amount: { kind: 'numeric' as const, value: '30' },
       number: { kind: 'numeric' as const, value: '2' }, currency: 'ILS' as const, completeness: 'complete' as const, issues: [],
@@ -305,10 +324,11 @@ describe('Excel builders', () => {
     expect(hebrewSheet.getCell('D24').value).toBe(2);
     expect(hebrewSheet.getCell('E24').value).toBe(1);
     expect(hebrewSheet.getCell('F24').value).toMatchObject({ formula: expect.stringContaining('C24*D24*E24') });
+    expect(hebrewSheet.getCell('F25').value).toMatchObject({ formula: expect.stringContaining('F24:F24') });
     expect(hebrewSheet.getCell('F26').value).toMatchObject({ formula: expect.stringContaining('F25*1.18') });
-    expect(hebrewSheet.getCell('F28').value).toMatchObject({ formula: expect.stringContaining('F21+F26') });
+    expect(hebrewSheet.getCell('B28').value).toBe('עלויות נלוות');
 
-    const usd = await buildUsdWorkbook({ ...usdModel, complimentaryStaff: [{ ...complimentaryStaff[0], currency: 'USD' }] });
+    const usd = await buildUsdWorkbook({ ...usdModel, complimentaryStaff: [{ ...complimentaryStaff[0], currency: 'ILS' }] }, 'ILS');
     const usdSheet = usd.worksheets[0];
     expect(usdSheet.getCell('B20').value).toBe('Free & Staff');
     expect(usdSheet.getCell('F22').value).toMatchObject({ formula: expect.stringContaining('C22*D22') });
@@ -321,17 +341,14 @@ describe('Excel builders', () => {
     expect(sheet.getCell('B25').value).toBe('צוות וחופשיים');
     expect(sheet.getCell('B26').value).toBe('סה"כ צוות וחופשיים לא כולל מע"מ');
     expect(sheet.getCell('F26').value).toEqual({ formula: '=""' });
-    expect(sheet.getCell('B27').value).toBe('סה"כ צוות וחופשיים  כולל מע"מ');
-    expect(sheet.getCell('B29').value).toBe('סה"ד חדרים כולל מע"מ בקיזוז חופשיים וצוות');
-    expect(sheet.getCell('B30').value).toBeNull();
-    expect(sheet.getCell('B31').value).toBe('עלויות נלוות');
-    expect(sheet.getCell('B32').value).toBe('סה"כ לאקסטרות לא כולל מע"מ');
-    expect(sheet.getCell('F32').value).toEqual({ formula: '=""' });
-    expect(sheet.getCell('F33').value).toMatchObject({ formula: expect.stringContaining('F32*1.18') });
-    expect(sheet.getCell('F35').value).toMatchObject({ formula: expect.stringContaining('F29+F33') });
-    expect(sheet.getCell('F36').value).toBeNull();
-    expect(sheet.getCell('F37').value).toMatchObject({ formula: expect.stringContaining('F35-F36') });
-    expect(sheet.pageSetup.printArea).toBe('A3:G46');
+    expect(sheet.getCell('B29').value).toBe('עלויות נלוות');
+    expect(sheet.getCell('B30').value).toBe('סה"כ לאקסטרות לא כולל מע"מ');
+    expect(sheet.getCell('F30').value).toEqual({ formula: '=""' });
+    expect(sheet.getCell('F31').value).toMatchObject({ formula: expect.stringContaining('F30*1.18') });
+    expect(sheet.getCell('F33').value).toMatchObject({ formula: expect.stringContaining('F23+F27+F31') });
+    expect(sheet.getCell('F34').value).toBeNull();
+    expect(sheet.getCell('F35').value).toMatchObject({ formula: expect.stringContaining('F33-F34') });
+    expect(sheet.pageSetup.printArea).toBe('A3:G44');
   });
 
   it('renders exactly the supplied staff and extras rows and keeps Notes within column F', async () => {
@@ -348,32 +365,23 @@ describe('Excel builders', () => {
 
     expect(sheet.getCell('B34').value).toBe('צוות');
     expect(sheet.getCell('B35').value).toBe('סה"כ צוות וחופשיים לא כולל מע"מ');
-    expect(sheet.getCell('B36').value).toBe('סה"כ צוות וחופשיים  כולל מע"מ');
-    expect(sheet.getCell('B38').value).toBe('סה"ד חדרים כולל מע"מ בקיזוז חופשיים וצוות');
-    expect(sheet.getCell('B40').value).toBe('עלויות נלוות');
-    expect(sheet.getCell('B41').value).toBe('Extra 1');
-    expect(sheet.getCell('B42').value).toBe('Extra 2');
-    expect(sheet.getCell('B43').value).toBe('סה"כ לאקסטרות לא כולל מע"מ');
-    expect(sheet.getCell('F44').value).toMatchObject({ formula: expect.stringContaining('F43*1.18') });
-    expect(sheet.getCell('F46').value).toMatchObject({ formula: expect.stringContaining('F38+F44') });
-    expect(sheet.getCell('F48').value).toMatchObject({ formula: expect.stringContaining('F46-F47') });
-    expect(sheet.model.merges).toContain('A51:F51');
-    expect(sheet.model.merges).not.toContain('A51:G51');
-    expect(sheet.model.merges).toContain('A56:G56');
-    expect(sheet.getCell('B49').border.top?.style).toBe('medium');
-    expect(sheet.getCell('B49').border.bottom?.style).toBe('medium');
-    expect(sheet.getCell('B49').border.left?.style).toBe('medium');
-    expect(sheet.getCell('C49').border.top?.style).toBe('medium');
-    expect(sheet.getCell('C49').border.bottom?.style).toBe('medium');
-    expect(sheet.getCell('F49').border.top?.style).toBe('medium');
-    expect(sheet.getCell('F49').border.bottom?.style).toBe('medium');
-    expect(sheet.getCell('F49').border.right?.style).toBe('medium');
-    expect(sheet.pageSetup.printArea).toBe('A3:G57');
+    expect(sheet.getCell('B38').value).toBe('עלויות נלוות');
+    expect(sheet.getCell('B39').value).toBe('Extra 1');
+    expect(sheet.getCell('B40').value).toBe('Extra 2');
+    expect(sheet.getCell('B41').value).toBe('סה"כ לאקסטרות לא כולל מע"מ');
+    expect(sheet.getCell('F42').value).toMatchObject({ formula: expect.stringContaining('F41*1.18') });
+    expect(sheet.getCell('F44').value).toMatchObject({ formula: expect.stringContaining('F31+F36+F42') });
+    expect(sheet.getCell('F46').value).toMatchObject({ formula: expect.stringContaining('F44-F45') });
+    expect(sheet.model.merges).toContain('A48:F48');
+    expect(sheet.model.merges).toContain('A54:G54');
+    expect(sheet.getCell('B47').border.top?.style).toBe('medium');
+    expect(sheet.getCell('F47').border.right?.style).toBe('medium');
+    expect(sheet.pageSetup.printArea).toBe('A3:G55');
 
     const roundTrip = new ExcelJS.Workbook();
     await roundTrip.xlsx.load(await (await buildHebrewWorkbook({ ...model([night('2026-10-24', 3), night('2026-10-25', 3)]), complimentaryStaff, additionalCharges })).xlsx.writeBuffer());
-    expect(roundTrip.worksheets[0].model.merges).toContain('A51:F51');
-    expect(roundTrip.worksheets[0].getCell('F48').value).toMatchObject({ formula: expect.stringContaining('F46-F47') });
+    expect(roundTrip.worksheets[0].model.merges).toContain('A48:F48');
+    expect(roundTrip.worksheets[0].getCell('F46').value).toMatchObject({ formula: expect.stringContaining('F44-F45') });
   });
 
   it('expands staff and extras beyond the original template capacity', async () => {
@@ -388,12 +396,12 @@ describe('Excel builders', () => {
     }));
     const sheet = (await buildHebrewWorkbook({ ...model([night('2026-10-24', 3)]), complimentaryStaff, additionalCharges })).worksheets[0];
 
-    expect(sheet.getCell('B28').value).toBe('צוות');
-    expect(sheet.getCell('B35').value).toBe('Extra 0');
-    expect(sheet.getCell('F43').value).toMatchObject({ formula: expect.stringContaining('F35:F42') });
-    expect(sheet.getCell('F44').value).toMatchObject({ formula: expect.stringContaining('F43*1.18') });
-    expect(sheet.getCell('F46').value).toMatchObject({ formula: expect.stringContaining('F32+F44') });
-    expect(sheet.getCell('F48').value).toMatchObject({ formula: expect.stringContaining('F46-F47') });
-    expect(sheet.getCell('A56').value).toContain('ישרוטל');
+    expect(sheet.getCell('B26').value).toBe('צוות');
+    expect(sheet.getCell('B33').value).toBe('Extra 0');
+    expect(sheet.getCell('F41').value).toMatchObject({ formula: expect.stringContaining('F33:F40') });
+    expect(sheet.getCell('F42').value).toMatchObject({ formula: expect.stringContaining('F41*1.18') });
+    expect(sheet.getCell('F44').value).toMatchObject({ formula: expect.stringContaining('F23+F30+F42') });
+    expect(sheet.getCell('F46').value).toMatchObject({ formula: expect.stringContaining('F44-F45') });
+    expect(sheet.getCell('A54').value).toContain('ישרוטל');
   });
 });

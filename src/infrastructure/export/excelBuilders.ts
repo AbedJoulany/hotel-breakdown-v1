@@ -27,6 +27,10 @@ const VISUAL_STYLES: Record<ExportLanguage, VisualStyle> = {
     fontName: 'Times New Roman', titleSize: 14, sectionSize: 12, headerSize: 11, bodySize: 11,
     border: 'FF000000', warningFill: 'FFFFC7CE',
   },
+  'english-ils': {
+    fontName: 'Times New Roman', titleSize: 14, sectionSize: 12, headerSize: 11, bodySize: 11,
+    border: 'FF000000', warningFill: 'FFFFC7CE',
+  },
 };
 
 const HEBREW_TEMPLATE_STYLE = {
@@ -49,8 +53,8 @@ export async function buildHebrewWorkbook(model: CanonicalExportModel): Promise<
   return buildHebrewWorkbookScratch(model);
 }
 
-export async function buildUsdWorkbook(model: CanonicalExportModel): Promise<ExcelJS.Workbook> {
-  return buildWorkbook(model, 'usd');
+export async function buildUsdWorkbook(model: CanonicalExportModel, currency: 'USD' | 'ILS' = 'USD'): Promise<ExcelJS.Workbook> {
+  return buildWorkbook(model, 'usd', currency);
 }
 
 export async function downloadWorkbook(workbook: ExcelJS.Workbook, fileName: string): Promise<void> {
@@ -126,25 +130,14 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
 
   const staffStartRow = combinedRow + 2;
   const staff = writeHebrewComplimentaryStaffSection(worksheet, staffStartRow, model, style);
-  const roomsAndStaffRow = staff.includingVatRow + 2;
-  writeHebrewTotalRow(
-    worksheet,
-    roomsAndStaffRow,
-    'סה"ד חדרים כולל מע"מ בקיזוז חופשיים וצוות',
-    `=IF(OR(F${combinedRow}="",F${staff.includingVatRow}=""),"",F${combinedRow}+F${staff.includingVatRow})`,
-    HEBREW_TEMPLATE_STYLE.colors.overall,
-    style,
-    'combined',
-  );
-
-  const extrasStartRow = roomsAndStaffRow + 2;
+  const extrasStartRow = staff.includingVatRow + 2;
   const extras = writeHebrewAdditionalChargesSection(worksheet, extrasStartRow, model, style);
   const finalTotalRow = extras.includingVatRow + 2;
   writeHebrewTotalRow(
     worksheet,
     finalTotalRow,
     'סה"כ לתשלום חדרים + עלויות נלוות כולל מע"מ',
-    `=IF(OR(F${roomsAndStaffRow}="",F${extras.includingVatRow}=""),"",F${roomsAndStaffRow}+F${extras.includingVatRow})`,
+    `=IF(OR(F${combinedRow}="",F${staff.includingVatRow}="",F${extras.includingVatRow}=""),"",F${combinedRow}+F${staff.includingVatRow}+F${extras.includingVatRow})`,
     HEBREW_TEMPLATE_STYLE.colors.header,
     style,
     'includingVat',
@@ -508,7 +501,7 @@ function writeHebrewTotalRow(worksheet: ExcelJS.Worksheet, row: number, label: s
   value.numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
 }
 
-async function buildWorkbook(model: CanonicalExportModel, language: ExportLanguage): Promise<ExcelJS.Workbook> {
+async function buildWorkbook(model: CanonicalExportModel, language: ExportLanguage, targetCurrency: 'USD' | 'ILS' = 'USD'): Promise<ExcelJS.Workbook> {
   const workbook = new ExcelJS.Workbook();
   const style = VISUAL_STYLES[language];
   workbook.creator = 'Hotel Breakdown V1';
@@ -525,7 +518,7 @@ async function buildWorkbook(model: CanonicalExportModel, language: ExportLangua
 
   const labels = language === 'hebrew'
     ? { title: 'פירוט מלון', group: 'שם הקבוצה', hotel: 'מלון מארח', dates: 'תאריכי דיווח', checkIn: 'צ׳ק-אין', checkOut: 'צ׳ק-אאוט', currency: 'מטבע', roomCharges: 'פירוט עלויות', description: 'הרכב', rooms: 'חדרים', rate: 'מחיר בשקלים', nights: 'לילות', beforeVat: 'לפני מע״מ', vat: 'מע״מ 18%', total: 'סה״כ', nightly: 'סה״כ ללילה', overall: 'סה״כ חיובי חדרים', summary: 'סיכום', draft: 'טיוטה' }
-    : { title: 'Hotel Breakdown', group: 'Group name', hotel: 'Hotel', dates: 'Dates', checkIn: 'Check-in', checkOut: 'Check-out', currency: 'Currency', roomCharges: 'rooms breakdon', description: 'Occupancy', rooms: 'no. of rooms', rate: 'cost', nights: 'night', beforeVat: '', vat: '', total: 'Total in $', nightly: 'Total Room charges', overall: 'Total Room charges in USD', summary: 'Summary', draft: 'DRAFT' };
+    : { title: 'Hotel Breakdown', group: 'Group name', hotel: 'Hotel', dates: 'Dates', checkIn: 'Check-in', checkOut: 'Check-out', currency: 'Currency', roomCharges: 'rooms breakdon', description: 'Occupancy', rooms: 'no. of rooms', rate: 'cost', nights: 'night', beforeVat: '', vat: '', total: `Total in ${targetCurrency}`, nightly: 'Total Room charges', overall: `Total Room charges in ${targetCurrency}`, summary: 'Summary', draft: 'DRAFT' };
 
   worksheet.columns = language === 'hebrew'
     ? [{ width: 12.7 }, { width: 30 }, { width: 14 }, { width: 9 }, { width: 9 }, { width: 14 }, { width: 14 }, { width: 17 }]
@@ -545,7 +538,7 @@ async function buildWorkbook(model: CanonicalExportModel, language: ExportLangua
   worksheet.getCell('B6').value = labels.dates;
   worksheet.getCell('C6').value = model.metadata.reportDates.join(', ');
   worksheet.getCell('B7').value = labels.currency;
-  worksheet.getCell('C7').value = language === 'hebrew' ? 'ILS' : 'USD';
+  worksheet.getCell('C7').value = targetCurrency;
   worksheet.getCell('B8').value = labels.checkIn;
   worksheet.getCell('C8').value = model.metadata.checkInDate ?? '—';
   worksheet.getCell('D8').value = labels.checkOut;
@@ -555,7 +548,6 @@ async function buildWorkbook(model: CanonicalExportModel, language: ExportLangua
 
   let row = 10;
   const detailTotalRefs: string[] = [];
-  const targetCurrency = language === 'hebrew' ? 'ILS' : 'USD';
   for (const night of model.nights) {
     worksheet.mergeCells(`B${row}:${columnLetter(lastColumn)}${row}`);
     worksheet.getCell(`B${row}`).value = `${labels.roomCharges} · ${night.reportDate}`;
@@ -632,7 +624,7 @@ function writeAdditionalChargesSection(
   startRow: number,
   model: CanonicalExportModel,
   language: ExportLanguage,
-  targetCurrency: string,
+  targetCurrency: 'USD' | 'ILS',
   style: VisualStyle,
   lastColumn: number,
 ): number {
@@ -675,8 +667,8 @@ function writeAdditionalChargesSection(
     if (language === 'hebrew') {
       for (const column of ['C', 'F', 'G', 'H']) worksheet.getCell(`${column}${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
     } else {
-      worksheet.getCell(`C${row}`).numFmt = '"$" #,##0.00;[Red]-"$" #,##0.00';
-      worksheet.getCell(`F${row}`).numFmt = '"$" #,##0.00;[Red]-"$" #,##0.00';
+      worksheet.getCell(`C${row}`).numFmt = currencyNumberFormat(targetCurrency);
+      worksheet.getCell(`F${row}`).numFmt = currencyNumberFormat(targetCurrency);
     }
   });
   const lastRow = firstRow + (model.additionalCharges?.length ?? 0) - 1;
@@ -694,7 +686,7 @@ function writeComplimentaryStaffSection(
   startRow: number,
   model: CanonicalExportModel,
   language: ExportLanguage,
-  targetCurrency: string,
+  targetCurrency: 'USD' | 'ILS',
   style: VisualStyle,
   lastColumn: number,
 ): number {
@@ -724,7 +716,7 @@ function writeComplimentaryStaffExcelRow(
   row: number,
   charge: NonNullable<CanonicalExportModel['complimentaryStaff']>[number],
   language: ExportLanguage,
-  targetCurrency: string,
+  targetCurrency: 'USD' | 'ILS',
   style: VisualStyle,
 ) {
   worksheet.getCell(`B${row}`).value = charge.type === 'free' ? 'Free' : 'Staff';
@@ -741,8 +733,8 @@ function writeComplimentaryStaffExcelRow(
     cell.border = { top: { style: 'thin', color: { argb: style.border } }, bottom: { style: 'thin', color: { argb: style.border } }, left: { style: column === 2 ? 'medium' : 'thin', color: { argb: style.border } }, right: { style: column === 6 ? 'medium' : 'thin', color: { argb: style.border } } };
     if (charge.completeness === 'incomplete' || charge.currency !== targetCurrency) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.warningFill } };
   }
-  worksheet.getCell(`C${row}`).numFmt = language === 'hebrew' ? HEBREW_TEMPLATE_STYLE.numberFormats.currency : '"$" #,##0.00;[Red]-"$" #,##0.00';
-  worksheet.getCell(`F${row}`).numFmt = language === 'hebrew' ? HEBREW_TEMPLATE_STYLE.numberFormats.currency : '"$" #,##0.00;[Red]-"$" #,##0.00';
+  worksheet.getCell(`C${row}`).numFmt = language === 'hebrew' ? HEBREW_TEMPLATE_STYLE.numberFormats.currency : currencyNumberFormat(targetCurrency);
+  worksheet.getCell(`F${row}`).numFmt = language === 'hebrew' ? HEBREW_TEMPLATE_STYLE.numberFormats.currency : currencyNumberFormat(targetCurrency);
 }
 
 function writeChargeRow(
@@ -750,7 +742,7 @@ function writeChargeRow(
   row: number,
   charge: CanonicalRoomChargeRow,
   language: ExportLanguage,
-  targetCurrency: string,
+  targetCurrency: 'USD' | 'ILS',
   style: VisualStyle,
   tableColumnCount: number,
 ) {
@@ -783,7 +775,7 @@ function writeChargeRow(
   for (const column of language === 'hebrew' ? ['C', 'D', 'E', 'F', 'G', 'H'] : ['C', 'D', 'E', 'F']) {
     worksheet.getCell(`${column}${row}`).numFmt = language === 'hebrew'
       ? '"₪" #,##0.00;[Red]-"₪" #,##0.00'
-      : '"$" #,##0.00;[Red]-"$" #,##0.00';
+      : currencyNumberFormat(targetCurrency);
   }
 }
 
@@ -791,6 +783,10 @@ function roomTypeLabel(code: string | null, language: ExportLanguage): string {
   if (!code) return language === 'hebrew' ? 'סוג חדר לא פתור' : 'Unresolved room type';
   const roomType = ROOM_TYPES.find((item) => item.code === code);
   return roomType ? (language === 'hebrew' ? roomType.he : roomType.en) : code;
+}
+
+function currencyNumberFormat(currency: 'USD' | 'ILS'): string {
+  return currency === 'USD' ? '"$" #,##0.00;[Red]-"$" #,##0.00' : '"₪" #,##0.00;[Red]-"₪" #,##0.00';
 }
 
 function occupancyLabel(category: string, language: ExportLanguage): string {
