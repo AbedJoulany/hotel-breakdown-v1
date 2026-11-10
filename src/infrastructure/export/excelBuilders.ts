@@ -1,8 +1,12 @@
 import ExcelJS from 'exceljs';
 import type { ExportLanguage } from '../../domain/export/models';
-import type { CanonicalExportModel, CanonicalRoomChargeRow } from '../../domain/export/models';
+import type { CanonicalExportModel, CanonicalNight, CanonicalRoomChargeRow } from '../../domain/export/models';
 import { ROOM_TYPES } from '../../domain/rooms/roomTypes';
 import { ORIENT_LOGO_DATA_URL } from './orientLogo';
+
+const ENGLISH_LOGO_URL = new URL('./isrotelLogo.jpg', import.meta.url).href;
+const ENGLISH_INDEXED_BLACK = { indexed: 64 } as unknown as ExcelJS.Color;
+const ENGLISH_INDEXED_WHITE = { indexed: 64 } as unknown as ExcelJS.Color;
 
 type VisualStyle = {
   fontName: string;
@@ -49,12 +53,23 @@ const HEBREW_TEMPLATE_STYLE = {
   numberFormats: { currency: '"₪ "#,##0', integer: '#,##0;[Red]-#,##0' },
 } as const;
 
+const ENGLISH_TEMPLATE_STYLE = {
+  columns: { a: 10.5703125, b: 25.7109375, c: 14, d: 12, e: 12.7109375, f: 18.140625 },
+  rows: { default: 12.75, issueDate: 15.75, headerValue: 19.5, metadata: 18.75, group: 24, section: 19.5, tableHeader: 13.5, detail: 13.5, subtotal: 15, combined: 16.5, staffHeader: 16.5, staffTableHeader: 15.75, staffDetail: 14.25, ancillary: 16.5, ancillaryDetail: 15.75 },
+  colors: { themeSection: 5, themeOverall: 4, themeDetail: 0, indexedAncillaryHeader: 43, indexedBackground: 64, sectionTint: 0.3999755851924192, overallTint: 0.5999938962981048 },
+  border: { style: 'medium' as const, color: ENGLISH_INDEXED_BLACK },
+  numberFormats: { usd: '[$$-409]#,##0.00', usdAccounting: '_-[$$-409]* #,##0.00_ ;_-[$$-409]* -#,##0.00 ;_-[$$-409]* "-"??_ ;_-@_ ', ils: '"₪ "#,##0' },
+  print: { left: 0.33, right: 0.48, top: 0.36, bottom: 0.35, header: 0.22, footer: 0.25 },
+  pageSetup: { paperSize: 9, scale: 76, fitToPage: false, fitToWidth: 1, fitToHeight: 1, horizontalDpi: 300, verticalDpi: 300, firstPageNumber: 1 },
+  imageRange: { tl: { nativeCol: 2, nativeColOff: 85725, nativeRow: 0, nativeRowOff: 0 }, br: { nativeCol: 4, nativeColOff: 428625, nativeRow: 6, nativeRowOff: 9525 } },
+} as const;
+
 export async function buildHebrewWorkbook(model: CanonicalExportModel): Promise<ExcelJS.Workbook> {
   return buildHebrewWorkbookScratch(model);
 }
 
 export async function buildUsdWorkbook(model: CanonicalExportModel, currency: 'USD' | 'ILS' = 'USD'): Promise<ExcelJS.Workbook> {
-  return buildWorkbook(model, 'usd', currency);
+  return buildEnglishUsdWorkbook(model, currency);
 }
 
 export async function downloadWorkbook(workbook: ExcelJS.Workbook, fileName: string): Promise<void> {
@@ -499,6 +514,389 @@ function writeHebrewTotalRow(worksheet: ExcelJS.Worksheet, row: number, label: s
   const value = worksheet.getCell(`F${row}`);
   styleHebrewTotalValue(value, style, kind, fill);
   value.numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+}
+
+async function buildEnglishUsdWorkbook(model: CanonicalExportModel, targetCurrency: 'USD' | 'ILS'): Promise<ExcelJS.Workbook> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Hotel Breakdown V1';
+  workbook.created = new Date();
+  workbook.calcProperties.fullCalcOnLoad = true;
+  const worksheet = workbook.addWorksheet('גיליון1', {
+    views: [{ rightToLeft: true, showGridLines: true, showRuler: true, showRowColHeaders: true, zoomScale: 100 }],
+    pageSetup: { orientation: 'portrait', ...ENGLISH_TEMPLATE_STYLE.pageSetup },
+  });
+  worksheet.pageSetup.margins = ENGLISH_TEMPLATE_STYLE.print;
+  worksheet.properties.defaultRowHeight = ENGLISH_TEMPLATE_STYLE.rows.default;
+  worksheet.columns = [
+    { width: ENGLISH_TEMPLATE_STYLE.columns.a },
+    { width: ENGLISH_TEMPLATE_STYLE.columns.b },
+    { width: ENGLISH_TEMPLATE_STYLE.columns.c },
+    { width: ENGLISH_TEMPLATE_STYLE.columns.d },
+    { width: ENGLISH_TEMPLATE_STYLE.columns.e },
+    { width: ENGLISH_TEMPLATE_STYLE.columns.f },
+  ];
+  const englishLogo = await loadEnglishLogo();
+  const logoId = workbook.addImage({ buffer: englishLogo, extension: 'jpeg' });
+  worksheet.addImage(logoId, ENGLISH_TEMPLATE_STYLE.imageRange as unknown as ExcelJS.ImageRange);
+
+  writeEnglishHeader(worksheet, model);
+
+  let row = 14;
+  const roomTotalRefs: string[] = [];
+  for (const night of model.nights) {
+    const section = writeEnglishRoomSection(worksheet, row, night, targetCurrency);
+    roomTotalRefs.push(`F${section.totalRow}`);
+    row = section.nextRow;
+  }
+
+  const combinedRoomRow = row;
+  writeEnglishCombinedRow(worksheet, combinedRoomRow, ` Total Room charges in ${targetCurrency}`, roomTotalRefs.length ? `=IF(OR(${roomTotalRefs.map((ref) => `${ref}=""`).join(',')}),"",SUM(${roomTotalRefs.join(',')}))` : '=""');
+  row = combinedRoomRow + 2;
+
+  const staff = writeEnglishStaffSection(worksheet, row, model, targetCurrency);
+  const finalComponents = [
+    model.nights.length > 0 ? `F${combinedRoomRow}` : null,
+    (model.complimentaryStaff?.length ?? 0) > 0 ? `F${staff.totalRow}` : null,
+    `F${staff.vatRow}`,
+    `F${staff.porterageRow}`,
+  ].filter((reference): reference is string => reference !== null);
+  worksheet.getCell(`F${staff.roomsLabelRow}`).value = {
+    formula: `=IF(OR(${finalComponents.map((reference) => `${reference}=""`).join(',')}),"",SUM(${finalComponents.join(',')}))`,
+  };
+  row = staff.nextRow;
+  const ancillary = writeEnglishAncillarySection(worksheet, row, model, targetCurrency);
+  row = ancillary.nextRow;
+  worksheet.pageSetup.printArea = `A1:G${row}`;
+  return workbook;
+}
+
+function writeEnglishHeader(worksheet: ExcelJS.Worksheet, model: CanonicalExportModel) {
+  worksheet.getRow(3).height = ENGLISH_TEMPLATE_STYLE.rows.issueDate;
+  writeEnglishHeaderLabel(worksheet.getCell('B3'), 'Issue Date', 'top');
+  writeEnglishHeaderLabel(worksheet.getCell('F3'), 'To', 'top');
+  for (const address of ['B4', 'F4']) {
+    const cell = worksheet.getCell(address);
+    cell.font = { name: 'Times New Roman', bold: true, size: 12 };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = { left: ENGLISH_TEMPLATE_STYLE.border, right: ENGLISH_TEMPLATE_STYLE.border, top: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: ENGLISH_TEMPLATE_STYLE.border };
+  }
+  worksheet.mergeCells('C6:E6');
+  worksheet.mergeCells('B8:E8');
+  worksheet.mergeCells('B9:E9');
+  worksheet.mergeCells('B10:E10');
+  worksheet.mergeCells('B11:E11');
+  worksheet.mergeCells('B12:E12');
+  const values: Record<number, string> = {
+    8: model.metadata.groupName,
+    9: model.metadata.hotelName ?? '',
+    10: model.metadata.reportDates.join(', '),
+    11: '',
+    12: '',
+  };
+  for (const row of [8, 9, 10, 11, 12]) {
+    const value = worksheet.getCell(`B${row}`);
+    value.value = values[row];
+    value.font = { name: 'Times New Roman', bold: row === 9, size: row === 9 ? 14 : 12 };
+    value.alignment = { horizontal: 'center', vertical: 'middle' };
+    const bottom = row === 12 ? ENGLISH_TEMPLATE_STYLE.border.style : 'thin';
+    value.border = { left: ENGLISH_TEMPLATE_STYLE.border, top: row === 8 ? ENGLISH_TEMPLATE_STYLE.border : { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: { style: bottom, color: ENGLISH_TEMPLATE_STYLE.border.color } };
+    for (let column = 3; column <= 5; column += 1) {
+      worksheet.getCell(row, column).font = value.font;
+      worksheet.getCell(row, column).alignment = value.alignment;
+      worksheet.getCell(row, column).border = { top: { style: row === 8 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: { style: bottom, color: ENGLISH_TEMPLATE_STYLE.border.color } };
+    }
+  }
+  const groupLabel = worksheet.getCell('F8');
+  const labels: Record<string, string> = { F8: 'Group name', F9: 'Hotel', F10: 'Dates', F11: 'PM', F12: 'Agent' };
+  for (const address of Object.keys(labels)) {
+    const cell = worksheet.getCell(address);
+    cell.value = labels[address];
+    cell.font = { name: 'Times New Roman', bold: true, size: 12 };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    const numericRow = Number(address.slice(1));
+    const bottom = numericRow === 12 ? 'medium' : 'thin';
+    cell.border = { left: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: ENGLISH_TEMPLATE_STYLE.border, top: { style: numericRow === 8 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: { style: bottom, color: ENGLISH_TEMPLATE_STYLE.border.color } };
+  }
+  for (const row of [8, 9, 10, 11, 12]) {
+    worksheet.getCell(`B${row}`).border = { ...worksheet.getCell(`B${row}`).border, left: ENGLISH_TEMPLATE_STYLE.border };
+    worksheet.getCell(`E${row}`).border = { ...worksheet.getCell(`E${row}`).border, right: { style: row === 8 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color } };
+    worksheet.getCell(`F${row}`).border = { ...worksheet.getCell(`F${row}`).border, left: { style: row === 8 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: row === 8 ? 'thin' : 'medium', color: ENGLISH_TEMPLATE_STYLE.border.color } };
+  }
+  worksheet.getCell('B8').fill = englishThemeFill(4, ENGLISH_TEMPLATE_STYLE.colors.overallTint);
+  for (let column = 3; column <= 6; column += 1) worksheet.getCell(8, column).fill = englishThemeFill(4, ENGLISH_TEMPLATE_STYLE.colors.overallTint);
+  worksheet.getRow(4).height = ENGLISH_TEMPLATE_STYLE.rows.headerValue;
+  worksheet.getRow(5).height = ENGLISH_TEMPLATE_STYLE.rows.default;
+  worksheet.getRow(6).height = ENGLISH_TEMPLATE_STYLE.rows.metadata;
+  worksheet.getRow(7).height = ENGLISH_TEMPLATE_STYLE.rows.metadata;
+  worksheet.getRow(8).height = ENGLISH_TEMPLATE_STYLE.rows.group;
+  worksheet.getRow(9).height = ENGLISH_TEMPLATE_STYLE.rows.metadata;
+  worksheet.getRow(10).height = ENGLISH_TEMPLATE_STYLE.rows.issueDate;
+  worksheet.getRow(11).height = ENGLISH_TEMPLATE_STYLE.rows.issueDate;
+  worksheet.getRow(12).height = 16.5;
+  worksheet.getRow(13).height = ENGLISH_TEMPLATE_STYLE.rows.headerValue;
+  void groupLabel;
+}
+
+function writeEnglishHeaderLabel(cell: ExcelJS.Cell, value: string, position: 'top') {
+  cell.value = value;
+  cell.font = { name: 'Times New Roman', bold: true, size: 12 };
+  cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  cell.border = { left: ENGLISH_TEMPLATE_STYLE.border, right: ENGLISH_TEMPLATE_STYLE.border, top: ENGLISH_TEMPLATE_STYLE.border, bottom: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color } };
+  void position;
+}
+
+function writeEnglishRoomSection(worksheet: ExcelJS.Worksheet, startRow: number, night: CanonicalNight, targetCurrency: 'USD' | 'ILS'): { totalRow: number; nextRow: number } {
+  worksheet.mergeCells(`B${startRow}:F${startRow}`);
+  styleEnglishSectionRow(worksheet, startRow, 'rooms breakdon');
+  const headerRow = startRow + 1;
+  [`Occupancy`, `no. of rooms`, `cost`, `night`, `Total in ${targetCurrency === 'USD' ? '$' : targetCurrency}`].forEach((value, index) => styleEnglishTableCell(worksheet.getCell(headerRow, index + 2), value, 'header', index === 0, index === 4));
+  worksheet.getRow(headerRow).height = ENGLISH_TEMPLATE_STYLE.rows.tableHeader;
+  const firstDetailRow = startRow + 2;
+  night.roomCharges.forEach((charge, index) => writeEnglishRoomDetail(worksheet, firstDetailRow + index, charge, targetCurrency));
+  const detailCount = night.roomCharges.length;
+  const totalRow = firstDetailRow + detailCount;
+  writeEnglishSubtotalRow(worksheet, totalRow, ' Total Room charges', detailCount ? `=IF(COUNTIF(F${firstDetailRow}:F${totalRow - 1},"")>0,"",SUM(F${firstDetailRow}:F${totalRow - 1}))` : '=""');
+  return { totalRow, nextRow: totalRow + 2 };
+}
+
+function writeEnglishRoomDetail(worksheet: ExcelJS.Worksheet, row: number, charge: CanonicalRoomChargeRow, targetCurrency: 'USD' | 'ILS') {
+  const complete = charge.financialCompleteness === 'complete' && charge.currency === targetCurrency && charge.rate.kind === 'numeric';
+  const rate = charge.rate.kind === 'numeric' ? Number(charge.rate.value) : null;
+  styleEnglishDetailRow(worksheet, row, `${roomTypeLabel(charge.bookedRoomType, 'usd')} · ${occupancyLabel(charge.occupancyCategory, 'usd')}`, charge.roomCount, complete ? rate : null, charge.nights, `=IF(OR(NOT(ISNUMBER(D${row})),D${row}=""),"",C${row}*D${row}*E${row})`);
+}
+
+function styleEnglishSectionRow(worksheet: ExcelJS.Worksheet, row: number, value: string, fontSize = 14, rowHeight: number = ENGLISH_TEMPLATE_STYLE.rows.section) {
+  worksheet.getRow(row).height = rowHeight;
+  for (let column = 2; column <= 6; column += 1) {
+    const cell = worksheet.getCell(row, column);
+    cell.value = column === 2 ? value : cell.value;
+    cell.font = { name: 'Times New Roman', bold: true, size: fontSize };
+    cell.fill = englishThemeFill(5, ENGLISH_TEMPLATE_STYLE.colors.sectionTint);
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = { left: { style: column === 2 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: column === 6 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: ENGLISH_TEMPLATE_STYLE.border, bottom: ENGLISH_TEMPLATE_STYLE.border };
+  }
+}
+
+function styleEnglishTableCell(cell: ExcelJS.Cell, value: string, kind: 'header', first: boolean, last: boolean) {
+  cell.value = value;
+  cell.font = { name: 'Times New Roman', bold: true, size: 11 };
+  cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  cell.border = { left: { style: first ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: last ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: ENGLISH_TEMPLATE_STYLE.border, bottom: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color } };
+  void kind;
+}
+
+function styleEnglishDetailRow(worksheet: ExcelJS.Worksheet, row: number, description: string, rooms: number, cost: number | null, night: number, formula: string) {
+  const values = [description, rooms, cost, night, { formula }];
+  worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.detail;
+  values.forEach((value, index) => {
+    const cell = worksheet.getCell(row, index + 2);
+    cell.value = value;
+    cell.font = { name: 'Times New Roman', bold: true, size: 11 };
+    cell.fill = englishThemeFill(0, 0);
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = { left: { style: index === 0 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: index === 4 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color } };
+  });
+  worksheet.getCell(`D${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+  worksheet.getCell(`F${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+}
+
+function writeEnglishSubtotalRow(worksheet: ExcelJS.Worksheet, row: number, label: string, formula: string) {
+  worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.subtotal;
+  const values = [label, null, null, null, { formula }];
+  values.forEach((value, index) => {
+    const cell = worksheet.getCell(row, index + 2);
+    cell.value = value;
+    cell.font = { name: 'Times New Roman', bold: true, size: 11 };
+    cell.fill = englishThemeFill(5, 0.7999816888943144);
+    cell.alignment = { horizontal: index === 0 ? 'center' : 'center', vertical: 'middle' };
+    cell.border = { left: { style: index === 0 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: index === 4 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: ENGLISH_TEMPLATE_STYLE.border };
+  });
+  worksheet.getCell(`F${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+}
+
+function writeEnglishCombinedRow(worksheet: ExcelJS.Worksheet, row: number, label: string, formula: string) {
+  worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.combined;
+  worksheet.mergeCells(`B${row}:E${row}`);
+  for (let column = 2; column <= 6; column += 1) {
+    const cell = worksheet.getCell(row, column);
+    if (column === 2) cell.value = label;
+    cell.font = { name: 'Times New Roman', bold: true, size: 12 };
+    cell.fill = englishThemeFill(4, ENGLISH_TEMPLATE_STYLE.colors.overallTint);
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = { left: { style: column === 2 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: column === 6 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: ENGLISH_TEMPLATE_STYLE.border, bottom: ENGLISH_TEMPLATE_STYLE.border };
+  }
+  worksheet.getCell(`F${row}`).value = { formula };
+  worksheet.getCell(`F${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usdAccounting;
+}
+
+function writeEnglishStaffSection(worksheet: ExcelJS.Worksheet, startRow: number, model: CanonicalExportModel, targetCurrency: 'USD' | 'ILS'): { nextRow: number; totalRow: number; vatRow: number; porterageRow: number; roomsLabelRow: number } {
+  worksheet.mergeCells(`B${startRow}:F${startRow}`);
+  styleEnglishSectionRow(worksheet, startRow, 'Free and Staff', 12, ENGLISH_TEMPLATE_STYLE.rows.staffHeader);
+  const headerRow = startRow + 1;
+  [['D', 'מחיר'], ['E', 'כמות'], ['F', 'סה"כ']].forEach(([column, value]) => {
+    const cell = worksheet.getCell(`${column}${headerRow}`);
+    cell.value = value;
+  });
+  for (let column = 2; column <= 6; column += 1) styleEnglishStaffHeaderCell(worksheet.getCell(headerRow, column), column === 2, column === 6);
+  worksheet.getRow(headerRow).height = ENGLISH_TEMPLATE_STYLE.rows.staffTableHeader;
+  const firstRow = startRow + 2;
+  const entries = model.complimentaryStaff ?? [];
+  entries.forEach((charge, index) => writeEnglishStaffDetail(worksheet, firstRow + index, charge, targetCurrency));
+  const totalRow = firstRow + entries.length;
+  writeEnglishStaffTotal(worksheet, totalRow, entries.length ? `=IF(COUNTIF(F${firstRow}:F${totalRow - 1},"")>0,"",SUM(F${firstRow}:F${totalRow - 1}))` : '=""');
+  const vatRow = totalRow + 2;
+  const porterageRow = vatRow + 2;
+  writeEnglishUnsupportedStaffRow(worksheet, vatRow, 'vat staff', englishThemeFill(7, 0.5999938962981048), {
+    formula: `=IF(OR(NOT(ISNUMBER(C${vatRow})),NOT(ISNUMBER(D${vatRow})),NOT(ISNUMBER(E${vatRow}))),"",C${vatRow}*D${vatRow}*E${vatRow})`,
+    unitValue: 1,
+    numberFormat: ENGLISH_TEMPLATE_STYLE.numberFormats.usdAccounting,
+  });
+  writeEnglishUnsupportedStaffRow(worksheet, porterageRow, 'Porterage', englishThemeFill(5, 0.7999816888943144), {
+    formula: `=IF(OR(NOT(ISNUMBER(C${porterageRow})),NOT(ISNUMBER(D${porterageRow}))),"",C${porterageRow}*D${porterageRow})`,
+    labelOnlyFill: true,
+  });
+  const roomsLabelRow = porterageRow + 2;
+  writeEnglishUnsupportedSummaryRow(worksheet, roomsLabelRow, 'Toal rooms is USD');
+  return { nextRow: roomsLabelRow + 2, totalRow, vatRow, porterageRow, roomsLabelRow };
+}
+
+function styleEnglishStaffHeaderCell(cell: ExcelJS.Cell, first: boolean, last: boolean) {
+  cell.font = { name: 'Times New Roman', bold: true, size: 12 };
+  cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  cell.border = { left: { style: first ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: last ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color } };
+}
+
+function writeEnglishStaffDetail(worksheet: ExcelJS.Worksheet, row: number, charge: NonNullable<CanonicalExportModel['complimentaryStaff']>[number], targetCurrency: 'USD' | 'ILS') {
+  const complete = charge.completeness === 'complete' && charge.currency === targetCurrency && charge.amount.kind === 'numeric' && charge.number.kind === 'numeric';
+  const amount = charge.amount.kind === 'numeric' ? Number(charge.amount.value) : null;
+  const number = charge.number.kind === 'numeric' ? Number(charge.number.value) : 0;
+  styleEnglishDetailRow(worksheet, row, charge.type === 'free' ? 'Free' : 'Staff', number, complete ? amount : null, 1, `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})`);
+  worksheet.getCell(`D${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+}
+
+function writeEnglishStaffTotal(worksheet: ExcelJS.Worksheet, row: number, formula: string) {
+  worksheet.getCell(`B${row}`).value = 'Total';
+  worksheet.getCell(`F${row}`).value = { formula };
+  for (let column = 2; column <= 6; column += 1) {
+    const cell = worksheet.getCell(row, column);
+    cell.font = { name: 'Times New Roman', bold: true, size: 11 };
+    cell.fill = englishThemeFill(5, 0.7999816888943144);
+    cell.alignment = { horizontal: column === 2 ? 'right' : 'center', vertical: 'middle' };
+    cell.border = { left: { style: column === 2 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: column === 6 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: ENGLISH_TEMPLATE_STYLE.border };
+  }
+  worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.subtotal;
+  worksheet.getCell(`F${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+}
+
+function writeEnglishUnsupportedStaffRow(worksheet: ExcelJS.Worksheet, row: number, label: string, fill: ExcelJS.Fill, options: { formula: string; unitValue?: number; numberFormat?: string; labelOnlyFill?: boolean }) {
+  worksheet.getCell(`B${row}`).value = label;
+  styleEnglishDetailRow(worksheet, row, label, 0, null, 1, '=""');
+  worksheet.getCell(`B${row}`).value = label;
+  worksheet.getCell(`C${row}`).value = null;
+  worksheet.getCell(`D${row}`).value = null;
+  worksheet.getCell(`E${row}`).value = null;
+  worksheet.getCell(`F${row}`).value = { formula: options.formula };
+  if (options.unitValue !== undefined) worksheet.getCell(`E${row}`).value = options.unitValue;
+  for (let column = 2; column <= 6; column += 1) {
+    const cell = worksheet.getCell(row, column);
+    if (!options.labelOnlyFill || column === 2) cell.fill = fill;
+    cell.border = { left: { style: column === 2 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: column === 6 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: ENGLISH_TEMPLATE_STYLE.border, bottom: ENGLISH_TEMPLATE_STYLE.border };
+  }
+  if (options.numberFormat) {
+    worksheet.getCell(`D${row}`).numFmt = options.numberFormat;
+    worksheet.getCell(`F${row}`).numFmt = options.numberFormat;
+  }
+}
+
+function writeEnglishUnsupportedSummaryRow(worksheet: ExcelJS.Worksheet, row: number, label: string) {
+  worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.staffHeader;
+  worksheet.mergeCells(`B${row}:E${row}`);
+  worksheet.getCell(`B${row}`).value = label;
+  for (let column = 2; column <= 6; column += 1) {
+    const cell = worksheet.getCell(row, column);
+    cell.fill = englishThemeFill(4, ENGLISH_TEMPLATE_STYLE.colors.overallTint);
+    cell.font = { name: 'Times New Roman', bold: true, size: 12 };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = { left: { style: column === 2 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: column === 6 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: ENGLISH_TEMPLATE_STYLE.border, bottom: ENGLISH_TEMPLATE_STYLE.border };
+  }
+  worksheet.getCell(`F${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usdAccounting;
+}
+
+function writeEnglishAncillarySection(worksheet: ExcelJS.Worksheet, startRow: number, model: CanonicalExportModel, targetCurrency: 'USD' | 'ILS'): { nextRow: number } {
+  worksheet.mergeCells(`B${startRow}:F${startRow}`);
+  styleEnglishSectionRow(worksheet, startRow, 'Extrot in Nis', 12, ENGLISH_TEMPLATE_STYLE.rows.ancillary);
+  const headerRow = startRow + 1;
+  ['', 'cost', 'no. of pax', '', 'Total'].forEach((value, index) => styleEnglishAncillaryHeaderCell(worksheet.getCell(headerRow, index + 2), value, index === 0, index === 4));
+  worksheet.getRow(headerRow).height = ENGLISH_TEMPLATE_STYLE.rows.ancillary;
+  const firstRow = startRow + 2;
+  const entries = model.additionalCharges ?? [];
+  entries.forEach((charge, index) => writeEnglishAncillaryDetail(worksheet, firstRow + index, charge, targetCurrency));
+  if (entries.length > 0) {
+    for (let column = 2; column <= 6; column += 1) {
+      worksheet.getCell(firstRow, column).border = { ...worksheet.getCell(firstRow, column).border, top: ENGLISH_TEMPLATE_STYLE.border };
+    }
+  }
+  const finalRow = firstRow + entries.length;
+  const formula = entries.length ? `=IF(COUNTIF(F${firstRow}:F${finalRow - 1},"")>0,"",SUM(F${firstRow}:F${finalRow - 1}))` : '=""';
+  worksheet.mergeCells(`B${finalRow}:E${finalRow}`);
+  worksheet.getCell(`B${finalRow}`).value = 'Total Extrot in Nis';
+  worksheet.getCell(`F${finalRow}`).value = { formula };
+  styleEnglishAncillaryTotal(worksheet, finalRow, true, ancillaryNumberFormat(entries));
+  return { nextRow: finalRow };
+}
+
+function styleEnglishAncillaryHeaderCell(cell: ExcelJS.Cell, value: string, first: boolean, last: boolean) {
+  cell.value = value;
+  cell.font = { name: 'Times New Roman', bold: true, size: 12 };
+  cell.fill = { type: 'pattern', pattern: 'none' };
+  cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  cell.border = { left: { style: first ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: last ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: ENGLISH_TEMPLATE_STYLE.border };
+}
+
+function writeEnglishAncillaryDetail(worksheet: ExcelJS.Worksheet, row: number, charge: NonNullable<CanonicalExportModel['additionalCharges']>[number], targetCurrency: 'USD' | 'ILS') {
+  const complete = charge.financialCompleteness === 'complete' && (charge.currency === 'ILS' || charge.currency === targetCurrency) && charge.price.kind === 'numeric' && charge.quantity.kind === 'numeric' && charge.number.kind === 'numeric';
+  const price = charge.price.kind === 'numeric' ? Number(charge.price.value) : null;
+  const quantity = charge.quantity.kind === 'numeric' ? Number(charge.quantity.value) : null;
+  const number = charge.number.kind === 'numeric' ? Number(charge.number.value) : null;
+  styleEnglishDetailRow(worksheet, row, charge.description || 'Unresolved description', complete && quantity !== null ? quantity : 0, complete ? price : null, complete && number !== null ? number : 0, complete ? `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` : '=""');
+  worksheet.getCell(`C${row}`).value = complete ? price : null;
+  worksheet.getCell(`D${row}`).value = complete ? quantity : null;
+  worksheet.getCell(`E${row}`).value = complete ? number : null;
+  const numberFormat = charge.currency === 'ILS' ? ENGLISH_TEMPLATE_STYLE.numberFormats.ils : ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+  worksheet.getCell(`C${row}`).numFmt = numberFormat;
+  worksheet.getCell(`F${row}`).numFmt = numberFormat;
+}
+
+function ancillaryNumberFormat(entries: NonNullable<CanonicalExportModel['additionalCharges']>): string {
+  return entries.length > 0 && entries.every((entry) => entry.currency === 'ILS') ? ENGLISH_TEMPLATE_STYLE.numberFormats.ils : ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+}
+
+function styleEnglishAncillaryTotal(worksheet: ExcelJS.Worksheet, row: number, grand: boolean, numberFormat: string) {
+  worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.ancillary;
+  for (let column = 2; column <= 6; column += 1) {
+    const cell = worksheet.getCell(row, column);
+    cell.font = { name: 'Times New Roman', bold: true, size: 12 };
+    cell.fill = grand ? englishThemeFill(4, ENGLISH_TEMPLATE_STYLE.colors.overallTint) : { type: 'pattern', pattern: 'none' };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = { left: { style: column === 2 ? 'thin' : 'medium', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: column === 6 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: grand ? undefined : ENGLISH_TEMPLATE_STYLE.border, bottom: grand ? ENGLISH_TEMPLATE_STYLE.border : undefined };
+  }
+  worksheet.getCell(`F${row}`).numFmt = numberFormat;
+}
+
+function englishThemeFill(theme: number, tint: number) {
+  return { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { theme, tint }, bgColor: ENGLISH_INDEXED_WHITE };
+}
+
+async function loadEnglishLogo(): Promise<ArrayBuffer | Uint8Array> {
+  try {
+    const response = await fetch(ENGLISH_LOGO_URL);
+    if (response.ok) return response.arrayBuffer();
+  } catch {
+    // Node/Vitest does not serve Vite asset URLs; use the same checked-in asset directly.
+  }
+  const { readFile } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  return readFile(join(process.cwd(), 'src', 'infrastructure', 'export', 'isrotelLogo.jpg'));
 }
 
 async function buildWorkbook(model: CanonicalExportModel, language: ExportLanguage, targetCurrency: 'USD' | 'ILS' = 'USD'): Promise<ExcelJS.Workbook> {
