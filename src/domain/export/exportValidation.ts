@@ -24,6 +24,13 @@ export function validateExport(model: CanonicalExportModel, language: ExportLang
         message: `${row.currency} additional charge cannot be represented in the selected ${targetCurrency} template`,
         sourceFactIds: [],
       })),
+    ...(model.complimentaryStaff ?? [])
+      .filter((row) => row.currency !== targetCurrency)
+      .map((row) => ({
+        code: 'currency-mismatch', severity: 'warning' as const, affects: 'presentation' as const,
+        message: `${row.currency} Free/Staff line cannot be represented in the selected ${targetCurrency} template`,
+        sourceFactIds: [],
+      })),
   ];
   const issues = [...model.warnings, ...currencyIssues];
   const finalBlockers = issues.filter((issue) => issue.severity === 'final-blocker');

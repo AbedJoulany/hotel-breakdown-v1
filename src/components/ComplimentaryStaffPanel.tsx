@@ -9,7 +9,7 @@ function rowTotal(row: ComplimentaryStaffRow): number | null {
   if (row.amount.trim() === '' || row.number.trim() === '') return null;
   const amount = Number(row.amount);
   const number = Number(row.number);
-  return Number.isFinite(amount) && amount >= 0 && Number.isInteger(number) && number >= 1 ? amount * number : null;
+  return Number.isFinite(amount) && Number.isInteger(number) && number >= 1 ? amount * number : null;
 }
 
 function formatTotal(value: number | null): string {
@@ -21,7 +21,7 @@ function rowIssues(row: ComplimentaryStaffRow): string[] {
   const amount = Number(row.amount);
   const number = Number(row.number);
   if (row.amount.trim() === '') issues.push('Amount is required.');
-  else if (!Number.isFinite(amount) || amount < 0) issues.push('Amount must be a valid non-negative number.');
+  else if (!Number.isFinite(amount)) issues.push('Amount must be a valid number.');
   if (row.number.trim() === '') issues.push('Number is required.');
   else if (!Number.isInteger(number) || number < 1) issues.push('Number must be a whole number greater than 0.');
   return issues;
@@ -69,7 +69,7 @@ export default function ComplimentaryStaffPanel({ rows, onChange }: Complimentar
                 </td>
                 <td>
                   <label className="visually-hidden" htmlFor={`complimentary-amount-${row.id}`}>Complimentary Amount {index + 1}</label>
-                  <input id={`complimentary-amount-${row.id}`} aria-label={`Complimentary Amount ${index + 1}`} aria-invalid={rowIssues(row).some((issue) => issue.startsWith('Amount'))} type="number" min="0" step="0.01" value={row.amount} onChange={(event) => updateRow(row.id, 'amount', event.target.value)} />
+                  <input id={`complimentary-amount-${row.id}`} aria-label={`Complimentary Amount ${index + 1}`} aria-invalid={rowIssues(row).some((issue) => issue.startsWith('Amount'))} type="number" step="0.01" value={row.amount} onChange={(event) => updateRow(row.id, 'amount', event.target.value)} />
                 </td>
                 <td>
                   <label className="visually-hidden" htmlFor={`complimentary-number-${row.id}`}>Complimentary Number {index + 1}</label>

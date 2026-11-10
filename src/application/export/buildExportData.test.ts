@@ -104,4 +104,18 @@ describe('buildExportData', () => {
     expect(model.additionalCharges?.[0]).toMatchObject({ description: 'Breakfast', currency: 'ILS', financialCompleteness: 'complete' });
     expect(model.warnings).toHaveLength(0);
   });
+
+  it('includes completed Free and Staff rows as separate export data', () => {
+    const model = buildExportData({
+      reports: [report([room('0524', 2, 1)])],
+      selectedGroupName: 'Group A',
+      corrections: [],
+      pricingRules: [rule('100', 'ILS')],
+      complimentaryStaff: [{ id: 'free-1', type: 'free', amount: '30', number: '2', currency: 'ILS' }],
+    });
+
+    expect(model.complimentaryStaff).toHaveLength(1);
+    expect(model.complimentaryStaff?.[0]).toMatchObject({ type: 'free', amount: { kind: 'numeric', value: '30' }, number: { kind: 'numeric', value: '2' }, completeness: 'complete' });
+    expect(model.warnings).toHaveLength(0);
+  });
 });

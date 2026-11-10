@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import type { CanonicalExportModel, CanonicalAdditionalChargeRow, CanonicalRoomChargeRow } from '../domain/export/models';
+import type { CanonicalExportModel, CanonicalAdditionalChargeRow, CanonicalComplimentaryStaffRow, CanonicalRoomChargeRow } from '../domain/export/models';
 import { validateExport } from '../domain/export/exportValidation';
 import { calculateFinancialPreview } from '../domain/pricing/financialCalculator';
 import type { ExportLanguage } from '../domain/export/models';
@@ -77,6 +77,24 @@ export default function ExportPreview({ model, language, rateOverrides, onRateCh
           </div>
         </section>
       )}
+      {(model.complimentaryStaff ?? []).length > 0 && (
+        <section className="export-night" aria-labelledby="export-complimentary-staff-title">
+          <h2 id="export-complimentary-staff-title">Complimentary &amp; Staff</h2>
+          <div className="export-table" role="table" aria-label="Complimentary and staff rows for export">
+            <div className="export-table-row export-table-header additional-export-row" role="row">
+              <span>Type</span><span>Amount</span><span>Number</span><span>Currency</span><span>Total</span><span />
+            </div>
+            {(model.complimentaryStaff ?? []).map((row) => (
+              <ComplimentaryStaffPreviewRow
+                key={row.id}
+                row={row}
+                amount={financial.complimentaryStaffRows.find((item) => item.groupedRowId === `complimentary-staff:${row.id}`)?.amount ?? null}
+              />
+            ))}
+          </div>
+          <p className="export-muted-note">These lines are exported separately and are not included in room-charge totals until the financial rules are approved.</p>
+        </section>
+      )}
     </section>
   );
 }
@@ -90,6 +108,19 @@ function AdditionalChargePreviewRow({ row, amount }: { row: CanonicalAdditionalC
       <span>{displayRate(row.number)}</span>
       <span>{row.currency}</span>
       <span>{amount ?? '—'}</span>
+    </div>
+  );
+}
+
+function ComplimentaryStaffPreviewRow({ row, amount }: { row: CanonicalComplimentaryStaffRow; amount: string | null }) {
+  return (
+    <div className={`export-table-row additional-export-row${row.completeness === 'incomplete' ? ' incomplete' : ''}`} role="row">
+      <span>{row.type === 'free' ? 'Free' : 'Staff'}</span>
+      <span>{displayRate(row.amount)}</span>
+      <span>{displayRate(row.number)}</span>
+      <span>{row.currency}</span>
+      <span>{amount ?? '—'}</span>
+      <span />
     </div>
   );
 }

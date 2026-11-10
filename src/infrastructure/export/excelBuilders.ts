@@ -124,13 +124,44 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
     : '=""';
   writeHebrewTotalRow(worksheet, combinedRow, labels.includingVat, combinedFormula, HEBREW_TEMPLATE_STYLE.colors.overall, style, 'combined');
 
-  let endRow = combinedRow;
-  if (model.additionalCharges?.length) {
-    endRow += 2;
-    endRow = writeHebrewAdditionalChargesSection(worksheet, endRow, model, style);
-  }
+  const staffStartRow = combinedRow + 2;
+  const staff = writeHebrewComplimentaryStaffSection(worksheet, staffStartRow, model, style);
+  const roomsAndStaffRow = staff.includingVatRow + 2;
+  writeHebrewTotalRow(
+    worksheet,
+    roomsAndStaffRow,
+    'סה"ד חדרים כולל מע"מ בקיזוז חופשיים וצוות',
+    `=IF(OR(F${combinedRow}="",F${staff.includingVatRow}=""),"",F${combinedRow}+F${staff.includingVatRow})`,
+    HEBREW_TEMPLATE_STYLE.colors.overall,
+    style,
+    'combined',
+  );
 
-  worksheet.pageSetup.printArea = `A3:${model.additionalCharges?.length ? 'H' : 'G'}${endRow}`;
+  const extrasStartRow = roomsAndStaffRow + 2;
+  const extras = writeHebrewAdditionalChargesSection(worksheet, extrasStartRow, model, style);
+  const finalTotalRow = extras.includingVatRow + 2;
+  writeHebrewTotalRow(
+    worksheet,
+    finalTotalRow,
+    'סה"כ לתשלום חדרים + עלויות נלוות כולל מע"מ',
+    `=IF(OR(F${roomsAndStaffRow}="",F${extras.includingVatRow}=""),"",F${roomsAndStaffRow}+F${extras.includingVatRow})`,
+    HEBREW_TEMPLATE_STYLE.colors.header,
+    style,
+    'includingVat',
+  );
+  writeHebrewPaymentRow(worksheet, finalTotalRow + 1, style);
+  const balanceRow = finalTotalRow + 2;
+  writeHebrewTotalRow(
+    worksheet,
+    balanceRow,
+    'סה"כ לתשלום חדרים + עלויות נלוות כולל מע"מ',
+    `=IF(OR(F${finalTotalRow}="",F${finalTotalRow + 1}=""),"",F${finalTotalRow}-F${finalTotalRow + 1})`,
+    HEBREW_TEMPLATE_STYLE.colors.header,
+    style,
+    'includingVat',
+  );
+  const footerEndRow = writeHebrewFooter(worksheet, balanceRow + 1, style);
+  worksheet.pageSetup.printArea = `A3:G${footerEndRow}`;
   return workbook;
 }
 
@@ -139,50 +170,179 @@ function writeHebrewAdditionalChargesSection(
   startRow: number,
   model: CanonicalExportModel,
   style: VisualStyle,
-): number {
-  worksheet.mergeCells(`B${startRow}:H${startRow}`);
-  worksheet.getCell(`B${startRow}`).value = 'עלויות נוספות';
-  styleMergedRow(worksheet, startRow, 2, 8, styleHebrewSection, style);
-  const headerRow = startRow + 1;
-  ['תיאור', 'מחיר', 'כמות', 'מספר', 'לפני מע״מ', 'מע״מ 18%', 'סה״כ'].forEach((value, index) => {
-    const cell = worksheet.getCell(headerRow, index + 2);
-    cell.value = value;
-    styleHebrewHeader(cell, style, index === 0, index === 6);
-  });
-  const firstRow = headerRow + 1;
-  model.additionalCharges?.forEach((charge, index) => {
+): { includingVatRow: number } {
+  worksheet.mergeCells(`B${startRow}:F${startRow}`);
+  worksheet.getCell(`B${startRow}`).value = 'עלויות נלוות';
+  worksheet.getRow(startRow).height = HEBREW_TEMPLATE_STYLE.rows.body;
+  styleMergedRow(worksheet, startRow, 2, 6, styleHebrewSection, style);
+  const detailCount = model.additionalCharges?.length ?? 0;
+  const firstRow = startRow + 1;
+  for (let index = 0; index < detailCount; index += 1) {
     const row = firstRow + index;
-    worksheet.getCell(`B${row}`).value = `${charge.description || 'תיאור לא פתור'}${charge.currency !== 'ILS' ? ` · ${charge.currency}` : ''}`;
-    worksheet.getCell(`C${row}`).value = charge.currency === 'ILS' && charge.price.kind === 'numeric' ? Number(charge.price.value) : null;
-    worksheet.getCell(`D${row}`).value = charge.quantity.kind === 'numeric' ? Number(charge.quantity.value) : null;
-    worksheet.getCell(`E${row}`).value = charge.number.kind === 'numeric' ? Number(charge.number.value) : null;
-    worksheet.getCell(`F${row}`).value = charge.financialCompleteness === 'complete' && charge.currency === 'ILS'
-      ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` }
-      : { formula: '=""' };
-    worksheet.getCell(`G${row}`).value = { formula: `=IF(F${row}="","",F${row}*18%)` };
-    worksheet.getCell(`H${row}`).value = { formula: `=IF(F${row}="","",F${row}+G${row})` };
-    for (let column = 2; column <= 8; column += 1) {
-      const cell = worksheet.getCell(row, column);
-      cell.font = { name: style.fontName, size: style.bodySize, color: { argb: style.border } };
-      cell.alignment = { horizontal: 'center', ...(column === 2 ? { readingOrder: 'rtl' as const } : {}) };
-      cell.border = { top: { style: 'thin', color: { argb: style.border } }, bottom: { style: 'thin', color: { argb: style.border } }, left: { style: column === 2 ? 'medium' : 'thin', color: { argb: style.border } }, right: { style: column === 8 ? 'medium' : 'thin', color: { argb: style.border } } };
-      if (charge.financialCompleteness === 'incomplete') cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.warningFill } };
-    }
-    for (const column of ['C', 'F', 'G', 'H']) worksheet.getCell(`${column}${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
-  });
-  const lastRow = firstRow + (model.additionalCharges?.length ?? 0) - 1;
-  const totalRow = lastRow + 1;
-  worksheet.mergeCells(`B${totalRow}:E${totalRow}`);
-  worksheet.getCell(`B${totalRow}`).value = 'סה״כ עלויות נוספות';
-  for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(totalRow, column), style, 'subtotal', style.subtotalFill);
-  worksheet.getCell(`F${totalRow}`).value = { formula: `=IF(COUNTIF(F${firstRow}:F${lastRow},"")>0,"",SUM(F${firstRow}:F${lastRow}))` };
-  worksheet.getCell(`G${totalRow}`).value = { formula: `=IF(COUNTIF(G${firstRow}:G${lastRow},"")>0,"",SUM(G${firstRow}:G${lastRow}))` };
-  worksheet.getCell(`H${totalRow}`).value = { formula: `=IF(COUNTIF(H${firstRow}:H${lastRow},"")>0,"",SUM(H${firstRow}:H${lastRow}))` };
-  for (const column of ['F', 'G', 'H']) {
-    styleHebrewTotalValue(worksheet.getCell(`${column}${totalRow}`), style, 'subtotal', style.subtotalFill);
-    worksheet.getCell(`${column}${totalRow}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+    const charge = model.additionalCharges?.[index];
+    writeHebrewAdditionalChargeRow(worksheet, row, charge, style);
   }
-  return totalRow;
+  const subtotalRow = firstRow + detailCount;
+  const dataCount = model.additionalCharges?.length ?? 0;
+  const dataLastRow = firstRow + dataCount - 1;
+  worksheet.mergeCells(`B${subtotalRow}:E${subtotalRow}`);
+  worksheet.getCell(`B${subtotalRow}`).value = 'סה"כ לאקסטרות לא כולל מע"מ';
+  for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(subtotalRow, column), style, 'subtotal', style.subtotalFill);
+  worksheet.getCell(`F${subtotalRow}`).value = { formula: dataCount ? `=IF(COUNTIF(F${firstRow}:F${dataLastRow},"")>0,"",SUM(F${firstRow}:F${dataLastRow}))` : '=""' };
+  styleHebrewTotalValue(worksheet.getCell(`F${subtotalRow}`), style, 'subtotal', style.subtotalFill);
+  worksheet.getCell(`F${subtotalRow}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+  const includingVatRow = subtotalRow + 1;
+  worksheet.mergeCells(`B${includingVatRow}:E${includingVatRow}`);
+  worksheet.getCell(`B${includingVatRow}`).value = 'סה\'\'כ לאקסטרות כולל מע"מ';
+  for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(includingVatRow, column), style, 'includingVat', HEBREW_TEMPLATE_STYLE.colors.header);
+  worksheet.getCell(`F${includingVatRow}`).value = { formula: `=IF(F${subtotalRow}="","",F${subtotalRow}*1.18)` };
+  styleHebrewTotalValue(worksheet.getCell(`F${includingVatRow}`), style, 'includingVat', HEBREW_TEMPLATE_STYLE.colors.header);
+  worksheet.getCell(`F${includingVatRow}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+  return { includingVatRow };
+}
+
+function writeHebrewAdditionalChargeRow(
+  worksheet: ExcelJS.Worksheet,
+  row: number,
+  charge: NonNullable<CanonicalExportModel['additionalCharges']>[number] | undefined,
+  style: VisualStyle,
+) {
+  const complete = Boolean(charge?.financialCompleteness === 'complete' && charge?.currency === 'ILS');
+  worksheet.getCell(`B${row}`).value = charge ? `${charge.description || 'תיאור לא פתור'}${charge.currency !== 'ILS' ? ` · ${charge.currency}` : ''}` : null;
+  worksheet.getCell(`C${row}`).value = complete && charge?.price.kind === 'numeric' ? Number(charge.price.value) : null;
+  worksheet.getCell(`D${row}`).value = charge?.quantity.kind === 'numeric' ? Number(charge.quantity.value) : null;
+  worksheet.getCell(`E${row}`).value = charge?.number.kind === 'numeric' ? Number(charge.number.value) : null;
+  worksheet.getCell(`F${row}`).value = complete
+    ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` }
+    : { formula: '=""' };
+  styleHebrewTemplateDetailRow(worksheet, row, style, !complete && Boolean(charge));
+  worksheet.getCell(`C${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+  worksheet.getCell(`F${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+}
+
+function writeHebrewComplimentaryStaffSection(
+  worksheet: ExcelJS.Worksheet,
+  startRow: number,
+  model: CanonicalExportModel,
+  style: VisualStyle,
+): { includingVatRow: number } {
+  worksheet.mergeCells(`B${startRow}:F${startRow}`);
+  worksheet.getCell(`B${startRow}`).value = 'צוות וחופשיים';
+  worksheet.getRow(startRow).height = HEBREW_TEMPLATE_STYLE.rows.body;
+  styleMergedRow(worksheet, startRow, 2, 6, styleHebrewSection, style);
+  const detailCount = model.complimentaryStaff?.length ?? 0;
+  const firstRow = startRow + 1;
+  for (let index = 0; index < detailCount; index += 1) {
+    const row = firstRow + index;
+    const charge = model.complimentaryStaff?.[index];
+    writeHebrewComplimentaryStaffRow(worksheet, row, charge, style);
+  }
+  const subtotalRow = firstRow + detailCount;
+  const dataCount = model.complimentaryStaff?.length ?? 0;
+  const dataLastRow = firstRow + dataCount - 1;
+  worksheet.mergeCells(`B${subtotalRow}:E${subtotalRow}`);
+  worksheet.getCell(`B${subtotalRow}`).value = 'סה"כ צוות וחופשיים לא כולל מע"מ';
+  for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(subtotalRow, column), style, 'subtotal', style.subtotalFill);
+  worksheet.getCell(`F${subtotalRow}`).value = { formula: dataCount ? `=IF(COUNTIF(F${firstRow}:F${dataLastRow},"")>0,"",SUM(F${firstRow}:F${dataLastRow}))` : '=""' };
+  styleHebrewTotalValue(worksheet.getCell(`F${subtotalRow}`), style, 'subtotal', style.subtotalFill);
+  worksheet.getCell(`F${subtotalRow}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+  const includingVatRow = subtotalRow + 1;
+  worksheet.mergeCells(`B${includingVatRow}:E${includingVatRow}`);
+  worksheet.getCell(`B${includingVatRow}`).value = 'סה"כ צוות וחופשיים  כולל מע"מ';
+  for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(includingVatRow, column), style, 'includingVat', HEBREW_TEMPLATE_STYLE.colors.header);
+  worksheet.getCell(`F${includingVatRow}`).value = { formula: `=IF(F${subtotalRow}="","",F${subtotalRow}*1.18)` };
+  styleHebrewTotalValue(worksheet.getCell(`F${includingVatRow}`), style, 'includingVat', HEBREW_TEMPLATE_STYLE.colors.header);
+  worksheet.getCell(`F${includingVatRow}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+  return { includingVatRow };
+}
+
+function writeHebrewComplimentaryStaffRow(
+  worksheet: ExcelJS.Worksheet,
+  row: number,
+  charge: NonNullable<CanonicalExportModel['complimentaryStaff']>[number] | undefined,
+  style: VisualStyle,
+) {
+  const complete = Boolean(charge?.completeness === 'complete' && charge?.currency === 'ILS');
+  worksheet.getCell(`B${row}`).value = charge ? (charge.type === 'free' ? 'חופשי' : 'צוות') : null;
+  worksheet.getCell(`C${row}`).value = complete && charge?.amount.kind === 'numeric' ? Number(charge.amount.value) : null;
+  worksheet.getCell(`D${row}`).value = charge?.number.kind === 'numeric' ? Number(charge.number.value) : null;
+  worksheet.getCell(`E${row}`).value = complete ? 1 : null;
+  worksheet.getCell(`F${row}`).value = complete
+    ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` }
+    : { formula: '=""' };
+  styleHebrewTemplateDetailRow(worksheet, row, style, !complete && Boolean(charge));
+  worksheet.getCell(`C${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+  worksheet.getCell(`F${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+}
+
+function writeHebrewPaymentRow(worksheet: ExcelJS.Worksheet, row: number, style: VisualStyle) {
+  worksheet.getRow(row).height = HEBREW_TEMPLATE_STYLE.rows.body;
+  worksheet.mergeCells(`B${row}:E${row}`);
+  worksheet.getCell(`B${row}`).value = 'שולם עבור עסקה';
+  for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(row, column), style, 'includingVat', HEBREW_TEMPLATE_STYLE.colors.header);
+  const value = worksheet.getCell(`F${row}`);
+  value.value = null;
+  styleHebrewTotalValue(value, style, 'includingVat', HEBREW_TEMPLATE_STYLE.colors.header);
+  value.numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+}
+
+function writeHebrewFooter(worksheet: ExcelJS.Worksheet, startRow: number, style: VisualStyle): number {
+  worksheet.getRow(startRow).height = HEBREW_TEMPLATE_STYLE.rows.metadataCompact;
+  worksheet.getCell(`B${startRow}`).value = 'הערות:';
+  worksheet.getCell(`B${startRow}`).font = { name: style.fontName, size: 12, color: { argb: style.border } };
+  worksheet.getCell(`B${startRow}`).border = { top: { style: 'medium', color: { argb: style.border } }, bottom: { style: 'medium', color: { argb: style.border } }, left: { style: 'medium', color: { argb: style.border } } };
+  const approval = 'נא להחזיר גמר חשבון זה מאושר על ידכם, תוך 5 ימי עבודה מיום קבלתו, לפקס 03-7608421';
+  const warning = 'במידה ולא יתקבל האישור חתום (ע"י מורשה חתימה), אנו רואים זאת כאישור החשבון, תוצא חשבונית בהתאם.';
+  for (let column = 2; column <= 6; column += 1) {
+    worksheet.getCell(startRow, column).border = {
+      top: { style: 'medium', color: { argb: style.border } },
+      bottom: { style: 'medium', color: { argb: style.border } },
+      ...(column === 2 ? { left: { style: 'medium' as const, color: { argb: style.border } } } : {}),
+      ...(column === 6 ? { right: { style: 'medium' as const, color: { argb: style.border } } } : {}),
+    };
+  }
+  worksheet.mergeCells(`A${startRow + 1}:F${startRow + 1}`);
+  worksheet.getCell(`A${startRow + 1}`).value = approval;
+  worksheet.mergeCells(`A${startRow + 2}:F${startRow + 2}`);
+  worksheet.getCell(`A${startRow + 2}`).value = warning;
+  for (const row of [startRow + 1, startRow + 2]) {
+    worksheet.getRow(row).height = HEBREW_TEMPLATE_STYLE.rows.body;
+    const cell = worksheet.getCell(`A${row}`);
+    cell.font = { name: style.fontName, size: 12, italic: true, color: { argb: style.border } };
+    cell.alignment = { horizontal: 'right' };
+  }
+  worksheet.getCell(`B${startRow + 3}`).value = 'שם  המאשר (מורשה חתימה)';
+  worksheet.getCell(`B${startRow + 5}`).value = 'חתימה + חותמת חברה';
+  for (const row of [startRow + 3, startRow + 5]) {
+    worksheet.getRow(row).height = HEBREW_TEMPLATE_STYLE.rows.body;
+    worksheet.getCell(`B${row}`).font = { name: style.fontName, size: 12, color: { argb: style.border } };
+    for (let column = 3; column <= 5; column += 1) {
+      worksheet.getCell(row, column).alignment = { horizontal: 'center' };
+      worksheet.getCell(row, column).border = { bottom: { style: 'thin', color: { argb: style.border } } };
+    }
+  }
+  worksheet.mergeCells(`A${startRow + 7}:G${startRow + 7}`);
+  worksheet.getCell(`A${startRow + 7}`).value = "ישרוטל  לקבוצות, מגדל אקרו, רח' יצחק שדה 8 , תל אביב 6777508  טל': 03-5197777 פקס: 03-7608421";
+  worksheet.getCell(`A${startRow + 7}`).font = { name: style.fontName, size: 10, bold: true, color: { argb: style.border } };
+  worksheet.getCell(`A${startRow + 7}`).alignment = { horizontal: 'center' };
+  worksheet.getCell(`A${startRow + 8}`).value = 'ט.ל.ח';
+  return startRow + 8;
+}
+
+function styleHebrewTemplateDetailRow(worksheet: ExcelJS.Worksheet, row: number, style: VisualStyle, warning: boolean) {
+  worksheet.getRow(row).height = HEBREW_TEMPLATE_STYLE.rows.body;
+  for (let column = 2; column <= 6; column += 1) {
+    const cell = worksheet.getCell(row, column);
+    cell.font = { name: style.fontName, size: style.bodySize, bold: true, color: { argb: style.border } };
+    cell.alignment = { horizontal: 'center', ...(column === 2 ? { readingOrder: 'rtl' as const } : {}) };
+    cell.border = {
+      top: { style: 'thin', color: { argb: style.border } },
+      bottom: { style: 'thin', color: { argb: style.border } },
+      left: { style: column === 2 ? 'medium' : 'thin', color: { argb: style.border } },
+      right: { style: column === 6 ? 'medium' : 'thin', color: { argb: style.border } },
+    };
+    if (warning) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.warningFill } };
+  }
 }
 
 function writeHebrewRoomSection(
@@ -459,6 +619,10 @@ async function buildWorkbook(model: CanonicalExportModel, language: ExportLangua
     row += 2;
     row = writeAdditionalChargesSection(worksheet, row, model, language, targetCurrency, style, lastColumn);
   }
+  if (model.complimentaryStaff?.length) {
+    row += 2;
+    row = writeComplimentaryStaffSection(worksheet, row, model, language, targetCurrency, style, lastColumn);
+  }
   worksheet.pageSetup.printArea = `A1:${columnLetter(lastColumn)}${row}`;
   return workbook;
 }
@@ -523,6 +687,62 @@ function writeAdditionalChargesSection(
   worksheet.getCell(`${totalColumn}${totalRow}`).value = { formula: `=IF(COUNTIF(${totalColumn}${firstRow}:${totalColumn}${lastRow},"")>0,"",SUM(${totalColumn}${firstRow}:${totalColumn}${lastRow}))` };
   styleSubtotal(worksheet.getCell(`${totalColumn}${totalRow}`), style);
   return totalRow;
+}
+
+function writeComplimentaryStaffSection(
+  worksheet: ExcelJS.Worksheet,
+  startRow: number,
+  model: CanonicalExportModel,
+  language: ExportLanguage,
+  targetCurrency: string,
+  style: VisualStyle,
+  lastColumn: number,
+): number {
+  worksheet.mergeCells(`B${startRow}:F${startRow}`);
+  worksheet.getCell(`B${startRow}`).value = language === 'hebrew' ? 'Free & Staff' : 'Free & Staff';
+  styleMergedRow(worksheet, startRow, 2, 6, styleSection, style);
+  const headerRow = startRow + 1;
+  ['Type', 'Amount', 'Number', 'Currency', 'Total'].forEach((value, index) => {
+    const cell = worksheet.getCell(headerRow, index + 2);
+    cell.value = value;
+    styleHeader(cell, style, index === 0, index === 4);
+  });
+  const firstRow = headerRow + 1;
+  model.complimentaryStaff?.forEach((charge, index) => writeComplimentaryStaffExcelRow(worksheet, firstRow + index, charge, language, targetCurrency, style));
+  const lastRow = firstRow + (model.complimentaryStaff?.length ?? 0) - 1;
+  const totalRow = lastRow + 1;
+  worksheet.mergeCells(`B${totalRow}:E${totalRow}`);
+  worksheet.getCell(`B${totalRow}`).value = 'Total Free & Staff';
+  styleSubtotalLabel(worksheet.getCell(`B${totalRow}`), style);
+  worksheet.getCell(`F${totalRow}`).value = { formula: `=IF(COUNTIF(F${firstRow}:F${lastRow},"")>0,"",SUM(F${firstRow}:F${lastRow}))` };
+  styleSubtotal(worksheet.getCell(`F${totalRow}`), style);
+  return totalRow;
+}
+
+function writeComplimentaryStaffExcelRow(
+  worksheet: ExcelJS.Worksheet,
+  row: number,
+  charge: NonNullable<CanonicalExportModel['complimentaryStaff']>[number],
+  language: ExportLanguage,
+  targetCurrency: string,
+  style: VisualStyle,
+) {
+  worksheet.getCell(`B${row}`).value = charge.type === 'free' ? 'Free' : 'Staff';
+  worksheet.getCell(`C${row}`).value = charge.currency === targetCurrency && charge.amount.kind === 'numeric' ? Number(charge.amount.value) : null;
+  worksheet.getCell(`D${row}`).value = charge.number.kind === 'numeric' ? Number(charge.number.value) : null;
+  worksheet.getCell(`E${row}`).value = charge.currency;
+  worksheet.getCell(`F${row}`).value = charge.completeness === 'complete' && charge.currency === targetCurrency
+    ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row}))),"",C${row}*D${row})` }
+    : { formula: '=""' };
+  for (let column = 2; column <= 6; column += 1) {
+    const cell = worksheet.getCell(row, column);
+    cell.font = { name: style.fontName, size: style.bodySize, color: { argb: style.border } };
+    cell.alignment = { horizontal: 'center', ...(language === 'hebrew' && column === 2 ? { readingOrder: 'rtl' as const } : {}) };
+    cell.border = { top: { style: 'thin', color: { argb: style.border } }, bottom: { style: 'thin', color: { argb: style.border } }, left: { style: column === 2 ? 'medium' : 'thin', color: { argb: style.border } }, right: { style: column === 6 ? 'medium' : 'thin', color: { argb: style.border } } };
+    if (charge.completeness === 'incomplete' || charge.currency !== targetCurrency) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.warningFill } };
+  }
+  worksheet.getCell(`C${row}`).numFmt = language === 'hebrew' ? HEBREW_TEMPLATE_STYLE.numberFormats.currency : '"$" #,##0.00;[Red]-"$" #,##0.00';
+  worksheet.getCell(`F${row}`).numFmt = language === 'hebrew' ? HEBREW_TEMPLATE_STYLE.numberFormats.currency : '"$" #,##0.00;[Red]-"$" #,##0.00';
 }
 
 function writeChargeRow(

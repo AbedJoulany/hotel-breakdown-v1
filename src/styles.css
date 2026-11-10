@@ -1286,3 +1286,9 @@ h1 {
   padding-top: 0.75rem;
   font-weight: 700;
 }
+
+.export-muted-note {
+  color: var(--muted-text);
+  font-size: 0.82rem;
+  margin: 0.75rem 0 0;
+}

@@ -99,8 +99,8 @@ function App() {
     : null;
   const financialValidation = financialSummary ? validateFinancialSummary(financialSummary) : null;
   const baseExportModel = useMemo(() => project?.selectedGroupName
-    ? buildExportData({ reports, selectedGroupName: project.selectedGroupName, corrections, pricingRules, additionalCharges })
-    : null, [reports, project?.selectedGroupName, corrections, pricingRules, additionalCharges]);
+    ? buildExportData({ reports, selectedGroupName: project.selectedGroupName, corrections, pricingRules, additionalCharges, complimentaryStaff })
+    : null, [reports, project?.selectedGroupName, corrections, pricingRules, additionalCharges, complimentaryStaff]);
   const exportModel = useMemo(() => baseExportModel ? applyRateOverrides(baseExportModel, rateOverrides) : null, [baseExportModel, rateOverrides]);
   const selectedFolioGroupRooms: GroupRoomForFolioComparison[] = project?.selectedGroupName
     ? analyses.flatMap((report) => report.groups

@@ -1,5 +1,6 @@
 import type { PricingRule, SupportedCurrency } from '../pricing/pricingRules';
 import type { AdditionalChargeRow } from '../charges/models';
+import type { ComplimentaryStaffRow } from '../charges/complimentaryStaffModels';
 import type { RoomCorrection } from '../reports/roomCorrections';
 import type { ActiveReportDocument } from '../reports/models';
 import type { IsoDate } from '../shared/types';
@@ -81,6 +82,16 @@ export interface CanonicalAdditionalChargeRow {
   issues: ExportIssue[];
 }
 
+export interface CanonicalComplimentaryStaffRow {
+  id: string;
+  type: 'free' | 'staff';
+  amount: RateValue;
+  number: RateValue;
+  currency: SupportedCurrency;
+  completeness: Completeness;
+  issues: ExportIssue[];
+}
+
 export interface CanonicalNight {
   reportDate: IsoDate;
   roomCharges: CanonicalRoomChargeRow[];
@@ -99,6 +110,7 @@ export interface CanonicalExportModel {
   };
   nights: CanonicalNight[];
   additionalCharges?: CanonicalAdditionalChargeRow[];
+  complimentaryStaff?: CanonicalComplimentaryStaffRow[];
   warnings: ExportIssue[];
 }
 
@@ -108,4 +120,5 @@ export interface ExportBuildInput {
   corrections: RoomCorrection[];
   pricingRules: PricingRule[];
   additionalCharges?: AdditionalChargeRow[];
+  complimentaryStaff?: ComplimentaryStaffRow[];
 }

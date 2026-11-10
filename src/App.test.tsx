@@ -331,11 +331,21 @@ describe('Home', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Complimentary & Staff' }));
 
     expect(screen.getByRole('alert', { name: 'Complimentary and staff validation' })).toHaveTextContent('Amount is required.');
-    fireEvent.change(screen.getByLabelText('Complimentary Amount 1'), { target: { value: '-5' } });
     fireEvent.change(screen.getByLabelText('Complimentary Number 1'), { target: { value: '0' } });
-    expect(screen.getByRole('alert', { name: 'Complimentary and staff validation' })).toHaveTextContent('Amount must be a valid non-negative number.');
+    expect(screen.getByRole('alert', { name: 'Complimentary and staff validation' })).toHaveTextContent('Amount is required.');
     expect(screen.getByRole('alert', { name: 'Complimentary and staff validation' })).toHaveTextContent('Number must be a whole number greater than 0.');
     expect(screen.getByLabelText('Complimentary Total 1')).toHaveTextContent('—');
+  });
+
+  it('accepts a negative Complimentary & Staff amount', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'New Project' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Complimentary & Staff' }));
+
+    fireEvent.change(screen.getByLabelText('Complimentary Amount 1'), { target: { value: '-30' } });
+    expect(screen.getByLabelText('Complimentary Amount 1')).toHaveValue(-30);
+    expect(screen.getByLabelText('Complimentary Total 1')).toHaveTextContent('-30.00');
+    expect(screen.queryByRole('alert', { name: 'Complimentary and staff validation' })).not.toBeInTheDocument();
   });
 
   it('processes multiple group reports and keeps one active report per date', async () => {

@@ -10,6 +10,7 @@ export interface FinancialRowResult {
 export interface FinancialPreview {
   rows: FinancialRowResult[];
   additionalRows: FinancialRowResult[];
+  complimentaryStaffRows: FinancialRowResult[];
   nightlyTotals: Record<string, Record<SupportedCurrency, string | null>>;
   totals: Record<SupportedCurrency, string | null>;
 }
@@ -50,9 +51,22 @@ export function calculateFinancialPreview(model: CanonicalExportModel, language:
     return { groupedRowId: `additional:${row.id}`, amount };
   });
 
+  const complimentaryStaffRows = (model.complimentaryStaff ?? []).map((row) => {
+    const amount = row.completeness === 'complete' && row.currency === (language === 'hebrew' ? 'ILS' : 'USD')
+      && row.amount.kind === 'numeric' && row.number.kind === 'numeric'
+      ? multiplyDecimal(row.amount.value, Number(row.number.value), language === 'hebrew' && row.currency === 'ILS' ? '1.18' : '1')
+      : null;
+    if (row.currency === (language === 'hebrew' ? 'ILS' : 'USD')) {
+      if (amount === null) totals[row.currency] = null;
+      else if (totals[row.currency] !== null) totals[row.currency] = addDecimal(totals[row.currency]!, amount);
+    }
+    return { groupedRowId: `complimentary-staff:${row.id}`, amount };
+  });
+
   return {
     rows,
     additionalRows,
+    complimentaryStaffRows,
     nightlyTotals,
     totals: {
       ILS: totals.ILS === null ? null : roundFinal(totals.ILS),

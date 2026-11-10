@@ -52,4 +52,17 @@ describe('calculateFinancialPreview', () => {
     expect(result.additionalRows[0].amount).toBe('59');
     expect(result.totals.ILS).toBe('295');
   });
+
+  it('adds Hebrew VAT to ILS Free and Staff amounts', () => {
+    const base = model('100', 'ILS');
+    const result = calculateFinancialPreview({
+      ...base,
+      complimentaryStaff: [{
+        id: 'staff-1', type: 'staff', amount: { kind: 'numeric', value: '30' },
+        number: { kind: 'numeric', value: '2' }, currency: 'ILS', completeness: 'complete', issues: [],
+      }],
+    }, 'hebrew');
+    expect(result.complimentaryStaffRows[0].amount).toBe('70.8');
+    expect(result.totals.ILS).toBe('306.8');
+  });
 });

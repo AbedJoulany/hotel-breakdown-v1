@@ -186,9 +186,9 @@ No additional proposed decision is being recorded in this file. New recommendati
 
 ### DEC-022 - Complimentary & Staff entry fields
 
-- **Status:** Approved; entry screen implemented, financial/export behavior not implemented
+- **Status:** Approved; entry screen and separate export section implemented, financial behavior not implemented
 - **Decision:** The `Complimentary & Staff` screen uses manual rows with exactly `Type` (`Free` or `Staff`), `Amount`, `Number` (default `1`), `Total` (`Amount × Number`), and `Currency` (`ILS` or `USD`). Rows are persisted in the active workspace snapshot.
-- **Deferred:** These rows are not yet included in Financial Summary or Excel Export. Any discount, VAT, confirmation, room assignment, or staff/free calculation rule requires a separate approval.
+- **Deferred:** These rows are not included in Financial Summary or room-charge totals. No VAT, confirmation, room assignment, or staff/free calculation rule is applied; each requires a separate approval.
 
 ## Unresolved decisions
 
