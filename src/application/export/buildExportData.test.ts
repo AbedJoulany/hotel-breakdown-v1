@@ -87,4 +87,35 @@ describe('buildExportData', () => {
     expect(effective.nights[0].roomCharges[0]).toMatchObject({ pricingStatus: 'resolved', rate: { kind: 'numeric', value: '125.5' } });
     expect(effective.warnings.some((issue) => issue.code === 'missing-price')).toBe(false);
   });
+
+  it('includes completed additional charges without exporting the untouched starter row', () => {
+    const model = buildExportData({
+      reports: [report([room('0524', 2, 1)])],
+      selectedGroupName: 'Group A',
+      corrections: [],
+      pricingRules: [rule('100', 'ILS')],
+      additionalCharges: [
+        { id: 'charge-1', description: 'Breakfast', price: '25', quantity: '2', number: '1', currency: 'ILS' },
+        { id: 'starter', description: '', price: '', quantity: '1', number: '1', currency: 'ILS' },
+      ],
+    });
+
+    expect(model.additionalCharges).toHaveLength(1);
+    expect(model.additionalCharges?.[0]).toMatchObject({ description: 'Breakfast', currency: 'ILS', financialCompleteness: 'complete' });
+    expect(model.warnings).toHaveLength(0);
+  });
+
+  it('includes completed Free and Staff rows as separate export data', () => {
+    const model = buildExportData({
+      reports: [report([room('0524', 2, 1)])],
+      selectedGroupName: 'Group A',
+      corrections: [],
+      pricingRules: [rule('100', 'ILS')],
+      complimentaryStaff: [{ id: 'free-1', type: 'free', amount: '30', number: '2', currency: 'ILS' }],
+    });
+
+    expect(model.complimentaryStaff).toHaveLength(1);
+    expect(model.complimentaryStaff?.[0]).toMatchObject({ type: 'free', amount: { kind: 'numeric', value: '30' }, number: { kind: 'numeric', value: '2' }, completeness: 'complete' });
+    expect(model.warnings).toHaveLength(0);
+  });
 });

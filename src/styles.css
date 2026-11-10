@@ -130,6 +130,177 @@ button:hover {
   padding: 0.75rem;
 }
 
+.additional-charges-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.complimentary-staff-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.complimentary-staff-table-wrap {
+  overflow-x: auto;
+}
+
+.complimentary-staff-table {
+  border-collapse: collapse;
+  min-width: 680px;
+  width: 100%;
+}
+
+.complimentary-staff-table th,
+.complimentary-staff-table td {
+  border-bottom: 1px solid #e4ddce;
+  padding: 0.65rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.complimentary-staff-table th {
+  color: #493b2b;
+  font-size: 0.78rem;
+}
+
+.complimentary-staff-table input,
+.complimentary-staff-table select {
+  background: #fffdf8;
+  border: 1px solid #d2c6b2;
+  border-radius: 0.5rem;
+  font: inherit;
+  min-width: 5rem;
+  padding: 0.5rem;
+  width: 100%;
+}
+
+.complimentary-staff-total {
+  color: #2f6657;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.complimentary-staff-currency-cell {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.complimentary-staff-delete {
+  font-size: 0.75rem;
+  padding: 0.5rem 0.7rem;
+}
+
+.complimentary-staff-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.complimentary-staff-actions {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.complimentary-staff-validation {
+  background: #fff8f5;
+  border: 1px solid #e8c8bd;
+  border-radius: 0.65rem;
+  color: #8a3e2b;
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.7rem 0.7rem 0.7rem 1.8rem;
+}
+
+.additional-charges-table-wrap {
+  overflow-x: auto;
+}
+
+.additional-charges-table {
+  border-collapse: collapse;
+  min-width: 760px;
+  width: 100%;
+}
+
+.additional-charges-table th,
+.additional-charges-table td {
+  border-bottom: 1px solid #e4ddce;
+  padding: 0.65rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.additional-charges-table th {
+  color: #493b2b;
+  font-size: 0.78rem;
+}
+
+.additional-charges-table input {
+  border: 1px solid #d2c6b2;
+  border-radius: 0.5rem;
+  font: inherit;
+  min-width: 0;
+  padding: 0.5rem;
+  width: 100%;
+}
+
+.additional-charges-table select {
+  background: #fffdf8;
+  border: 1px solid #d2c6b2;
+  border-radius: 0.5rem;
+  font: inherit;
+  min-width: 5rem;
+  padding: 0.5rem;
+}
+
+.additional-charges-table td:first-child {
+  min-width: 16rem;
+}
+
+.additional-charge-description-cell {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.additional-charge-total {
+  color: #2f6657;
+  font-weight: 700;
+  min-width: 6rem;
+  white-space: nowrap;
+}
+
+.additional-charge-delete {
+  font-size: 0.75rem;
+  padding: 0.5rem 0.7rem;
+}
+
+.additional-charge-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.additional-charges-actions {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
 .eyebrow {
   color: #8b5e34;
   font-size: 0.75rem;
@@ -990,6 +1161,10 @@ h1 {
   display: block;
 }
 
+.export-screen[hidden] {
+  display: none;
+}
+
 .export-language-switcher {
   display: flex;
   justify-content: flex-end;
@@ -1079,6 +1254,10 @@ h1 {
   border-bottom: 1px solid #e2e8f0;
 }
 
+.additional-export-row {
+  grid-template-columns: minmax(14rem, 2fr) 7rem 7rem 7rem 7rem 10rem;
+}
+
 .export-table-header {
   color: var(--muted-text);
   font-size: 0.78rem;
@@ -1106,4 +1285,10 @@ h1 {
   gap: 1rem;
   padding-top: 0.75rem;
   font-weight: 700;
+}
+
+.export-muted-note {
+  color: var(--muted-text);
+  font-size: 0.82rem;
+  margin: 0.75rem 0 0;
 }
