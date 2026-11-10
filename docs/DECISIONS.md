@@ -146,7 +146,7 @@ Last reviewed: 2026-11-07
   - Use the applicable date-specific pricing rule; different rates remain separate.
   - Show a subtotal for each date and overall room-charge totals.
   - For `Master Hebrew.xlsx`, enter room rates before VAT, calculate 18% VAT for each night, and show nightly and overall totals before VAT, VAT amounts, and totals including VAT.
-  - For `Master $.xlsx`, do not add VAT to room charges and do not perform automatic currency conversion.
+  - For `Master $.xlsx`, support two English choices: English/USD and English/ILS. Do not add VAT to room charges and do not perform automatic currency conversion. Values whose currency differs from the selected English template remain unresolved/warned rather than being converted.
   - Keep `Unresolved`, `Pricing Conflict`, and `Missing Price` visible. Leave unresolved rates and monetary totals blank, never zero.
   - Display warnings on the Excel Export screen. Warnings must not block Draft or Final Export.
   - When implemented, Final Export downloads immediately without an additional confirmation dialog.
@@ -156,7 +156,7 @@ Last reviewed: 2026-11-07
   - Duplicate-room conflict presentation in Excel.
   - Complimentary & Staff mapping and calculations.
   - Additional Charges mapping and calculations.
-  - Mixed-currency handling in the USD template.
+  - Any future mixed-currency handling beyond the approved English-ILS output.
   - Structural changes to the Excel templates or relocation of existing formulas.
 - **Evidence:** Superseded by the approved from-scratch generated workbook architecture in DEC-019 and DEC-020.
 
@@ -214,7 +214,7 @@ No additional proposed decision is being recorded in this file. New recommendati
 
 - **Status:** Approved; implemented
 - **Decision:** `Additional Charges` remain manually entered independent line items. Each line has a description, price, quantity, number, and one supported currency (`ILS` or `USD`). Currency totals remain separate and no automatic conversion is applied.
-- **VAT:** `Master Hebrew.xlsx` applies 18% VAT to eligible ILS Additional Charges. `Master $.xlsx` applies no VAT to Additional Charges.
+- **VAT:** `Master Hebrew.xlsx` applies 18% VAT to eligible ILS Additional Charges. The English ILS export applies no VAT to Additional Charges.
 - **Export:** Additional Charges are exported in a separate section. Charges whose currency does not match the selected template remain visible with a clear currency-mismatch warning and are not silently converted or included in the selected template's monetary total.
 - **Reason:** Preserve currency integrity and make unsupported template amounts visible without inventing an exchange rate.
 
@@ -222,7 +222,9 @@ No additional proposed decision is being recorded in this file. New recommendati
 
 - **Status:** Approved; entry screen and separate export section implemented, financial behavior not implemented
 - **Decision:** The `Complimentary & Staff` screen uses manual rows with exactly `Type` (`Free` or `Staff`), `Amount`, `Number` (default `1`), `Total` (`Amount × Number`), and `Currency` (`ILS` or `USD`). Rows are persisted in the active workspace snapshot.
-- **Deferred:** These rows are not included in Financial Summary or room-charge totals. No VAT, confirmation, room assignment, or staff/free calculation rule is applied; each requires a separate approval.
+- **Implemented:** Hebrew export applies 18% VAT to eligible ILS Complimentary/Staff rows and includes their VAT-inclusive total in the Hebrew overall total. USD export applies no VAT and keeps these rows outside the USD room total.
+- **Updated decision:** Hebrew Financial Summary and final Hebrew workbook totals include `Complimentary & Staff` after VAT.
+- **Deferred:** Confirmation, room assignment, and broader staff/free calculation rules require separate approval.
 
 ## Unresolved decisions
 

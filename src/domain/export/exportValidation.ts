@@ -1,4 +1,4 @@
-import type { CanonicalExportModel, ExportIssue, ExportLanguage } from './models';
+import { exportTargetCurrency, type CanonicalExportModel, type ExportIssue, type ExportLanguage } from './models';
 
 export interface ExportValidation {
   canDraft: boolean;
@@ -7,8 +7,8 @@ export interface ExportValidation {
   finalBlockers: ExportIssue[];
 }
 
-export function validateExport(model: CanonicalExportModel, language: ExportLanguage = 'usd'): ExportValidation {
-  const targetCurrency = language === 'hebrew' ? 'ILS' : 'USD';
+export function validateExport(model: CanonicalExportModel, language: ExportLanguage = 'usd', folioComparisonComplete = true): ExportValidation {
+  const targetCurrency = exportTargetCurrency(language);
   const currencyIssues: ExportIssue[] = [
     ...model.nights.flatMap((night) => night.roomCharges
       .filter((row) => row.currency !== null && row.currency !== targetCurrency)
@@ -32,7 +32,14 @@ export function validateExport(model: CanonicalExportModel, language: ExportLang
         sourceFactIds: [],
       })),
   ];
-  const issues = [...model.warnings, ...currencyIssues];
+  const issues = [
+    ...model.warnings,
+    ...currencyIssues,
+    ...(folioComparisonComplete ? [] : [{
+      code: 'folio-comparison-required', severity: 'warning' as const, affects: 'presentation' as const,
+      message: 'Complete Folio Comparison before exporting.', sourceFactIds: [],
+    }]),
+  ];
   const finalBlockers = issues.filter((issue) => issue.severity === 'final-blocker');
-  return { canDraft: true, canFinal: finalBlockers.length === 0, issues, finalBlockers };
+  return { canDraft: folioComparisonComplete, canFinal: folioComparisonComplete && finalBlockers.length === 0, issues, finalBlockers };
 }

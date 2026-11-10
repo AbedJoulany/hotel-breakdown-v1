@@ -9,7 +9,7 @@ import { parseFolio, type ParsedFolio } from '../infrastructure/pdf/parseFolio';
 interface FolioComparisonPanelProps {
   groupRooms: GroupRoomForFolioComparison[];
   warningAcknowledgement: FolioWarningAcknowledgement | null;
-  onFolioLoaded: (fileHash: string) => void;
+  onFolioLoaded: (fileHash: string | null) => void;
   onWarningAcknowledged: () => void;
 }
 
@@ -42,6 +42,7 @@ function FolioComparisonPanel({
       setFolio(null);
       setFileName(null);
       setFileHash(null);
+      onFolioLoaded(null);
       setError('Could not analyze this Folio PDF.');
     }
   }

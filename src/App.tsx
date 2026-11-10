@@ -59,6 +59,7 @@ function App() {
   const [exportLanguage, setExportLanguage] = useState<ExportLanguage>('usd');
   const [rateOverrides, setRateOverrides] = useState<Map<string, string>>(new Map());
   const [folioWarningAcknowledgement, setFolioWarningAcknowledgement] = useState<FolioWarningAcknowledgement | null>(null);
+  const [folioComparisonComplete, setFolioComparisonComplete] = useState(false);
   const coverage = summarizeReportCoverage(reports);
   const selectedRangeInvalid = Boolean(
     project?.dateRange.start && project.dateRange.end && project.dateRange.start > project.dateRange.end,
@@ -185,14 +186,16 @@ function App() {
 
   async function handleExcelExport(final: boolean) {
     if (!exportModel) return;
-    const validation = validateExport(exportModel, exportLanguage);
-    if (final && !validation.canFinal) {
-      setError(`Final Export is blocked by ${validation.finalBlockers.length} unresolved issue(s).`);
+    const validation = validateExport(exportModel, exportLanguage, folioComparisonComplete);
+    if ((final && !validation.canFinal) || (!final && !validation.canDraft)) {
+      setError(!folioComparisonComplete
+        ? 'Complete Folio Comparison before exporting.'
+        : `Final Export is blocked by ${validation.finalBlockers.length} unresolved issue(s).`);
       return;
     }
     const workbook = exportLanguage === 'hebrew'
       ? await buildHebrewWorkbook(exportModel)
-      : await buildUsdWorkbook(exportModel);
+      : await buildUsdWorkbook(exportModel, exportLanguage === 'english-ils' ? 'ILS' : 'USD');
     const suffix = final ? 'final' : 'draft';
     await downloadWorkbook(workbook, `hotel-breakdown-${suffix}-${exportLanguage}.xlsx`);
   }
@@ -303,6 +306,7 @@ function App() {
     setAdditionalCharges([createAdditionalChargeRow('additional-charge-1')]);
     setComplimentaryStaff([createComplimentaryStaffRow('complimentary-staff-1')]);
     setFolioWarningAcknowledgement(null);
+    setFolioComparisonComplete(false);
     setProject(createProject({
       id: `project-${Date.now()}`,
       name: 'Untitled Project',
@@ -334,6 +338,7 @@ function App() {
       setAdditionalCharges(snapshot.additionalCharges?.length ? snapshot.additionalCharges : [createAdditionalChargeRow('additional-charge-1')]);
       setComplimentaryStaff(snapshot.complimentaryStaff?.length ? snapshot.complimentaryStaff : [createComplimentaryStaffRow('complimentary-staff-1')]);
       setFolioWarningAcknowledgement(snapshot.folioWarningAcknowledgement ?? null);
+      setFolioComparisonComplete(false);
       setReportMessage('Saved project restored.');
     } catch {
       setError('Could not load the saved workspace from this device.');
@@ -700,7 +705,10 @@ function App() {
             <FolioComparisonPanel
               groupRooms={selectedFolioGroupRooms}
               warningAcknowledgement={folioWarningAcknowledgement}
-              onFolioLoaded={(fileHash) => setFolioWarningAcknowledgement({ folioFileHash: fileHash, acknowledgedAt: '' })}
+              onFolioLoaded={(fileHash) => {
+                setFolioComparisonComplete(Boolean(fileHash));
+                setFolioWarningAcknowledgement(fileHash ? { folioFileHash: fileHash, acknowledgedAt: '' } : null);
+              }}
               onWarningAcknowledged={() => setFolioWarningAcknowledgement((current) => current
                 ? { ...current, acknowledgedAt: new Date().toISOString() }
                 : current)}
@@ -722,6 +730,7 @@ function App() {
                 Export language
                 <select value={exportLanguage} onChange={(event) => setExportLanguage(event.target.value as ExportLanguage)}>
                   <option value="usd">English / USD</option>
+                  <option value="english-ils">English / ILS</option>
                   <option value="hebrew">עברית / ILS</option>
                 </select>
               </label>
@@ -731,6 +740,7 @@ function App() {
               language={exportLanguage}
               rateOverrides={rateOverrides}
               onRateChange={(groupedRowId, value) => setRateOverrides((current) => new Map(current).set(groupedRowId, value))}
+              folioComparisonComplete={folioComparisonComplete}
               onExport={(final) => void handleExcelExport(final)}
             />
           </section>

@@ -111,7 +111,7 @@ Implemented invariants:
 - Exact duplicate reports are ignored.
 - An invalid candidate cannot replace a valid active report.
 
-Basic financial calculation is implemented with integer minor units, two-decimal ILS/USD totals, separate currencies, and per-room-night rounding. The pure Final Export gate is implemented, while discounts, additional charges, and the export action remain unimplemented. Pricing conflict and Missing Price results are connected to the displayed financial summary. Folio comparison accepts normalized entries, and `src/infrastructure/pdf/parseFolio.ts` maps the inspected layout into those entries plus separate ILS/USD summary totals while excluding account rows; the UI aggregates comparison by room and guest across dates, and the pure Final Export gate combines financial blockers with unacknowledged Folio warnings.
+Basic financial calculation is implemented with integer minor units, two-decimal ILS/USD totals, separate currencies, and per-room-night rounding. Hebrew VAT is applied to room charges, approved Additional Charges, and Complimentary/Staff rows in the Hebrew export; Hebrew Complimentary/Staff totals are included in the Hebrew overall total. English export supports separate `USD` and `ILS` template choices, applies no VAT, and does not convert between currencies. The pure Final Export gate is implemented. Pricing conflict and Missing Price results are connected to the displayed financial summary. Folio comparison accepts normalized entries, and `src/infrastructure/pdf/parseFolio.ts` maps the inspected layout into those entries plus separate ILS/USD summary totals while excluding account rows; the UI aggregates comparison by room and guest across dates, and the pure Final Export gate combines financial blockers with unacknowledged Folio warnings.
 
 ## Error handling
 
@@ -158,13 +158,13 @@ The following boundaries are planned but not implemented:
 
 ### Excel template inspection and generated workbook architecture
 
-**Implemented:** The supplied templates were inspected without modification. `Master $.xlsx` has one populated sheet (`גיליון1`) plus two empty sheets and contains metadata, repeated room-charge blocks, a USD room total, staff/free rows, and ancillary-cost sections. `Master Hebrew.xlsx` has one populated sheet (`גיליון`) with room totals, hardcoded 18% VAT formulas, staff/free rows, ancillary costs, paid-amount adjustment, and final payable totals.
+**Implemented:** The supplied templates were inspected without modification. `Master $.xlsx` has one populated sheet (`גיליון1`) plus two empty sheets and contains metadata, repeated room-charge blocks, a reference USD room total, staff/free rows, and ancillary-cost sections. Generated English export uses the same visual family and supports either USD or ILS throughout the workbook. `Master Hebrew.xlsx` has one populated sheet (`גיליון`) with room totals, hardcoded 18% VAT formulas, staff/free rows, ancillary costs, paid-amount adjustment, and final payable totals.
 
 **Implemented:** The supplied templates remain visual and business references only. New workbooks are generated from scratch with one worksheet, independent date sections, editable rate cells, guarded formulas, dynamic print areas, Hebrew RTL or USD LTR layout, and the verified Orient logo asset.
 
 **Implemented:** `ExportDataBuilder` produces an immutable canonical model with grouped rows, temporary `groupedRowId`, lightweight source references, typed rates, issue severity, separate data/financial completeness, and no authoritative derived monetary totals. `Export Preview` applies session-scoped rate overrides and both preview and Excel export use the same effective model and `FinancialCalculator` rules.
 
-**Unresolved:** The templates' fixed single/double/staff/free categories do not map directly to the application's room-type and occupancy records. VAT inclusion, the English template's mixed USD/ILS sections, and manual fields such as `PM`, `Agent`, `Free`, `vat staff`, and `paid for transaction` require explicit approval before export implementation.
+**Unresolved:** The templates' fixed single/double/staff/free categories do not map directly to the application's room-type and occupancy records. Manual fields such as `PM`, `Agent`, `Free`, `vat staff`, and `paid for transaction` require explicit approval before further export implementation.
 
 These modules must consume domain/application contracts rather than place business rules in React components.
 
@@ -198,7 +198,7 @@ Planned but not currently installed or used:
 - Final Export uses the approved issue severity policy; unresolved Duplicate Room Conflict and Unresolved Occupancy policy details remain open.
 - Complimentary discount formula and Free/Staff financial treatment are unresolved.
 - Backup schema and storage-failure behavior are unresolved.
-- Complimentary/Staff remains outside the implemented workbook sections. Additional Charges are implemented as a generated separate export section with currency-specific VAT behavior; reference-template-specific field mapping remains unresolved.
+- Complimentary/Staff is implemented as a generated separate workbook section; Hebrew applies 18% VAT and includes the result in the Hebrew overall total, while USD applies no VAT and keeps the section outside the USD room total. Broader staff/free financial treatment remains unresolved. Additional Charges are implemented as a generated separate export section with currency-specific VAT behavior; reference-template-specific field mapping remains unresolved.
 
 ## Architectural change rule
 
