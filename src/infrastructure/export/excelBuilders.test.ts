@@ -43,6 +43,30 @@ const usdModel: CanonicalExportModel = {
   }],
 };
 
+function usdNight(date: string, count: number): CanonicalNight {
+  const source = night(date, count);
+  return {
+    ...source,
+    roomCharges: source.roomCharges.map((row) => ({ ...row, currency: 'USD', groupingKey: { ...row.groupingKey, currency: 'USD' }, rate: { kind: 'numeric', value: '100' } })),
+  };
+}
+
+function englishModel(nights: CanonicalNight[]): CanonicalExportModel {
+  return {
+    metadata: { hotelName: 'QA Hotel', groupName: 'QA Group', checkInDate: '2026-10-24', checkOutDate: '2026-10-25', reportDates: nights.map((item) => item.reportDate), currencies: ['USD'] },
+    warnings: [], nights,
+  };
+}
+
+function jpegDimensions(bytes: Uint8Array): { width: number; height: number } {
+  for (let index = 2; index + 9 < bytes.length; index += 1) {
+    if (bytes[index] === 0xff && bytes[index + 1] >= 0xc0 && bytes[index + 1] <= 0xc3) {
+      return { height: (bytes[index + 5] << 8) | bytes[index + 6], width: (bytes[index + 7] << 8) | bytes[index + 8] };
+    }
+  }
+  throw new Error('JPEG dimensions not found');
+}
+
 describe('Excel builders', () => {
   it('renders one Hebrew section with the original three-row layout', async () => {
     const sheet = (await buildHebrewWorkbook(model([night('2026-10-24', 3)]))).worksheets[0];
@@ -266,9 +290,10 @@ describe('Excel builders', () => {
     const workbook = await buildUsdWorkbook(usdModel, 'ILS');
     const sheet = workbook.worksheets[0];
     expect(workbook.worksheets).toHaveLength(1);
-    expect(sheet.getCell('D12').value).toBe(100);
-    expect(sheet.getCell('F12').value).toMatchObject({ formula: expect.stringContaining('ISNUMBER(D12)') });
-    expect(sheet.views[0].rightToLeft).toBe(false);
+    expect(sheet.name).toBe('גיליון1');
+    expect(sheet.getCell('D16').value).toBe(100);
+    expect(sheet.getCell('F16').value).toMatchObject({ formula: expect.stringContaining('ISNUMBER(D16)') });
+    expect(sheet.views[0].rightToLeft).toBe(true);
     expect(sheet.getImages()).toHaveLength(1);
   });
 
@@ -286,9 +311,204 @@ describe('Excel builders', () => {
       })),
     };
     const sheet = (await buildUsdWorkbook(usdFixture)).worksheets[0];
-    expect(sheet.getCell('C7').value).toBe('USD');
-    expect(sheet.getCell('D12').value).toBe(100);
-    expect(sheet.getCell('D12').numFmt).toContain('$');
+    expect(sheet.getCell('B8').value).toBe('Group A');
+    expect(sheet.getCell('B10').value).toBe('2026-10-24');
+    expect(sheet.getCell('D16').value).toBe(100);
+    expect(sheet.getCell('D16').numFmt).toContain('$');
+  });
+
+  it('matches the English template geometry and preserves dynamic USD references', async () => {
+    const complimentaryStaff = [{
+      id: 'staff-1', type: 'staff' as const, amount: { kind: 'numeric' as const, value: '30' }, number: { kind: 'numeric' as const, value: '2' },
+      currency: 'USD' as const, completeness: 'complete' as const, issues: [],
+    }];
+    const additionalCharges = [1, 2].map((index) => ({
+      id: `extra-${index}`, description: `Extra ${index}`, price: { kind: 'numeric' as const, value: String(index * 10) },
+      quantity: { kind: 'numeric' as const, value: '1' }, number: { kind: 'numeric' as const, value: '1' }, currency: 'USD' as const, financialCompleteness: 'complete' as const, issues: [],
+    }));
+    const workbook = await buildUsdWorkbook({ ...englishModel([usdNight('2026-10-24', 3), usdNight('2026-10-25', 3)]), complimentaryStaff, additionalCharges });
+    const sheet = workbook.worksheets[0];
+
+    expect(workbook.worksheets).toHaveLength(1);
+    expect(sheet.name).toBe('גיליון1');
+    expect(sheet.views[0].rightToLeft).toBe(true);
+    expect(sheet.getColumn(1).width).toBe(10.5703125);
+    expect(sheet.getColumn(2).width).toBe(25.7109375);
+    expect(sheet.getColumn(3).width).toBe(14);
+    expect(sheet.getColumn(4).width).toBe(12);
+    expect(sheet.getColumn(5).width).toBe(12.7109375);
+    expect(sheet.getColumn(6).width).toBe(18.140625);
+    expect(sheet.getCell('B3').value).toBe('Issue Date');
+    expect(sheet.getCell('F3').value).toBe('To');
+    expect(sheet.getCell('B4').border.top?.style).toBe('thin');
+    expect(sheet.getCell('B4').border.bottom?.style).toBe('medium');
+    expect(sheet.getCell('F4').border.top?.style).toBe('thin');
+    expect(sheet.getCell('F4').border.bottom?.style).toBe('medium');
+    expect(sheet.getCell('B8').value).toBe('QA Group');
+    expect(sheet.getCell('B9').value).toBe('QA Hotel');
+    expect(sheet.getCell('F10').value).toBe('Dates');
+    expect(sheet.getCell('E8').border.right?.style).toBe('medium');
+    expect(sheet.getCell('F8').border.left?.style).toBe('medium');
+    expect(sheet.getCell('F8').border.right?.style).toBe('thin');
+    expect(sheet.model.merges).toEqual(expect.arrayContaining(['B8:E8', 'B9:E9', 'B10:E10', 'B11:E11', 'B12:E12', 'B14:F14', 'B21:F21']));
+    expect(sheet.getCell('B14').value).toBe('rooms breakdon');
+    expect(sheet.getCell('B15').value).toBe('Occupancy');
+    expect(sheet.getCell('B16').value).toContain('Orient Room');
+    expect(sheet.getRow(14).height).toBe(19.5);
+    expect(sheet.getRow(15).height).toBe(13.5);
+    expect(sheet.getRow(16).height).toBe(13.5);
+    expect(sheet.getCell('B14').font.name).toBe('Times New Roman');
+    expect(sheet.getCell('B14').font.size).toBe(14);
+    expect((sheet.getCell('B14').fill as ExcelJS.FillPattern).fgColor?.theme).toBe(5);
+    expect(sheet.getCell('B15').border.top?.style).toBe('medium');
+    expect(sheet.getCell('F16').border.right?.style).toBe('medium');
+    expect(sheet.getCell('F19').value).toMatchObject({ formula: expect.stringContaining('F16:F18') });
+    expect(sheet.getCell('B21').value).toBe('rooms breakdon');
+    expect(sheet.getCell('F26').value).toMatchObject({ formula: expect.stringContaining('F23:F25') });
+    expect(sheet.getCell('F28').value).toMatchObject({ formula: expect.stringContaining('F19') });
+    expect(sheet.getCell('F28').value).toMatchObject({ formula: expect.stringContaining('F26') });
+    expect(sheet.getCell('B30').value).toBe('Free and Staff');
+    expect(sheet.getCell('B32').value).toBe('Staff');
+    expect(sheet.getCell('F32').value).toMatchObject({ formula: expect.stringContaining('C32*D32*E32') });
+    expect(sheet.getCell('F35').value).toMatchObject({ formula: expect.stringContaining('C35*D35*E35') });
+    expect(sheet.getCell('F37').value).toMatchObject({ formula: expect.stringContaining('C37*D37') });
+    expect((sheet.getCell('B35').fill as ExcelJS.FillPattern).fgColor?.theme).toBe(7);
+    expect((sheet.getCell('B37').fill as ExcelJS.FillPattern).fgColor?.theme).toBe(5);
+    expect((sheet.getCell('C37').fill as ExcelJS.FillPattern).fgColor?.theme).toBe(0);
+    expect((sheet.getCell('B39').fill as ExcelJS.FillPattern).fgColor?.theme).toBe(4);
+    expect(sheet.getCell('F39').numFmt).toContain('[$$-409]');
+    expect(sheet.getCell('F39').value).toMatchObject({ formula: expect.stringContaining('SUM(F28,F33,F35,F37)') });
+    expect(sheet.getCell('F39').value).toMatchObject({ formula: expect.stringContaining('F28=""') });
+    expect(sheet.getCell('B41').value).toBe('Extrot in Nis');
+    expect(sheet.getCell('A42').value).toBeNull();
+    expect(sheet.getCell('B42').value).toBe('');
+    expect(sheet.getCell('C42').value).toBe('cost');
+    expect(sheet.getCell('D42').value).toBe('no. of pax');
+    expect(sheet.getCell('F42').value).toBe('Total');
+    expect((sheet.getCell('B42').fill as ExcelJS.FillPattern).pattern).toBe('none');
+    expect((sheet.getCell('C42').fill as ExcelJS.FillPattern).pattern).toBe('none');
+    expect(sheet.model.merges).not.toContain('A42:B42');
+    expect(sheet.getCell('B43').value).toBe('Extra 1');
+    expect(sheet.getCell('B44').value).toBe('Extra 2');
+    expect(sheet.getCell('F45').value).toMatchObject({ formula: expect.stringContaining('F43:F44') });
+    expect(sheet.getCell('B45').value).toBe('Total Extrot in Nis');
+    expect(sheet.getCell('F32').numFmt).toContain('$');
+    expect(sheet.getCell('F44').numFmt).toContain('$');
+    expect(sheet.getImages()).toHaveLength(1);
+    const logoBytes = workbook.model.media[0].buffer as Uint8Array;
+    expect(logoBytes.byteLength).toBe(11940);
+    expect(jpegDimensions(logoBytes)).toEqual({ width: 422, height: 270 });
+    expect(sheet.getImages()[0].range.tl.nativeCol).toBe(2);
+    expect(sheet.getImages()[0].range.tl.nativeColOff).toBe(85725);
+    expect(sheet.getImages()[0].range.br.nativeCol).toBe(4);
+    expect(sheet.pageSetup.paperSize).toBe(9);
+    expect(sheet.pageSetup.orientation).toBe('portrait');
+    expect(sheet.pageSetup.scale).toBe(76);
+    expect(sheet.pageSetup.fitToPage).toBe(false);
+    expect(sheet.pageSetup.fitToWidth).toBe(1);
+    expect(sheet.pageSetup.fitToHeight).toBe(1);
+    expect(sheet.pageSetup.printArea).toBe('A1:G45');
+
+    const reloaded = new ExcelJS.Workbook();
+    await reloaded.xlsx.load(await workbook.xlsx.writeBuffer());
+    expect(reloaded.worksheets).toHaveLength(1);
+    expect(reloaded.worksheets[0].views[0].rightToLeft).toBe(true);
+    expect(reloaded.worksheets[0].model.merges).toContain('B14:F14');
+    expect(reloaded.worksheets[0].getCell('F28').value).toMatchObject({ formula: expect.stringContaining('F19') });
+  });
+
+  it('keeps empty English staff and ancillary sections blank without placeholder detail rows', async () => {
+    const sheet = (await buildUsdWorkbook(englishModel([usdNight('2026-10-24', 1)]))).worksheets[0];
+
+    expect(sheet.getCell('B21').value).toBe('Free and Staff');
+    expect(sheet.getCell('B23').value).toBe('Total');
+    expect(sheet.getCell('F23').value).toEqual({ formula: '=""' });
+    expect(sheet.getCell('B25').value).toBe('vat staff');
+    expect(sheet.getCell('F25').value).toMatchObject({ formula: expect.stringContaining('C25*D25*E25') });
+    expect(sheet.getCell('F27').value).toMatchObject({ formula: expect.stringContaining('C27*D27') });
+    expect(sheet.getCell('B31').value).toBe('Extrot in Nis');
+    expect(sheet.getCell('B32').value).toBe('');
+    expect(sheet.getCell('C32').value).toBe('cost');
+    expect(sheet.getCell('D32').value).toBe('no. of pax');
+    expect(sheet.getCell('F32').value).toBe('Total');
+    expect(sheet.getCell('B33').value).toBe('Total Extrot in Nis');
+    expect(sheet.getCell('F33').value).toEqual({ formula: '=""' });
+    expect(sheet.getCell('B29').value).toBe('Toal rooms is USD');
+    expect(sheet.getCell('F29').value).toMatchObject({ formula: expect.stringContaining('SUM(F19,F25,F27)') });
+    expect(sheet.getCell('B34').value).toBeNull();
+    expect(sheet.pageSetup.printArea).toBe('A1:G33');
+  });
+
+  it.each([0, 1, 2])('places the English ancillary total immediately after %i detail rows', async (count) => {
+    const additionalCharges = Array.from({ length: count }, (_, index) => ({
+      id: `extra-${index}`, description: `Extra ${index}`, price: { kind: 'numeric' as const, value: '25' },
+      quantity: { kind: 'numeric' as const, value: '1' }, number: { kind: 'numeric' as const, value: '1' },
+      currency: 'ILS' as const, financialCompleteness: 'complete' as const, issues: [],
+    }));
+    const sheet = (await buildUsdWorkbook({
+      ...englishModel([usdNight('2026-10-24', 3), usdNight('2026-10-25', 3)]),
+      complimentaryStaff: [{ id: 'staff-1', type: 'staff' as const, amount: { kind: 'numeric' as const, value: '30' }, number: { kind: 'numeric' as const, value: '2' }, currency: 'USD' as const, completeness: 'complete' as const, issues: [] }],
+      additionalCharges,
+    })).worksheets[0];
+    const finalRow = 43 + count;
+    expect(sheet.getCell(`B${finalRow}`).value).toBe('Total Extrot in Nis');
+    expect(sheet.getCell(`F${finalRow}`).value).toMatchObject({ formula: count ? expect.stringContaining(`F43:F${finalRow - 1}`) : '=""' });
+    expect(sheet.getCell(`B${finalRow - 1}`).value).not.toBe('סה"כ עלויות נלוות לאירוח');
+    expect(sheet.model.merges).not.toContain(`C${finalRow - 1}:E${finalRow - 1}`);
+    expect(sheet.pageSetup.printArea).toBe(`A1:G${finalRow}`);
+  });
+
+  it('formats confirmed ILS ancillary values without conversion in the USD workbook', async () => {
+    const additionalCharges = [{
+      id: 'ils-extra', description: 'Breakfast', price: { kind: 'numeric' as const, value: '25' },
+      quantity: { kind: 'numeric' as const, value: '2' }, number: { kind: 'numeric' as const, value: '1' },
+      currency: 'ILS' as const, financialCompleteness: 'complete' as const, issues: [],
+    }];
+    const sheet = (await buildUsdWorkbook({ ...englishModel([usdNight('2026-10-24', 1), usdNight('2026-10-25', 1)]), additionalCharges }, 'USD')).worksheets[0];
+    expect(sheet.getCell('C38').value).toBe(25);
+    expect(sheet.getCell('C38').numFmt).toBe('"₪ "#,##0');
+    expect(sheet.getCell('F38').numFmt).toBe('"₪ "#,##0');
+    expect(sheet.getCell('F38').value).toMatchObject({ formula: expect.stringContaining('C38*D38*E38') });
+    expect(sheet.getCell('F39').numFmt).toBe('"₪ "#,##0');
+    expect(sheet.getCell('F39').value).toMatchObject({ formula: expect.stringContaining('F38:F38') });
+    expect(sheet.getCell('F38').value).not.toMatchObject({ formula: expect.stringContaining('1.18') });
+  });
+
+  it.each([0, 1, 2, 3])('renders %i dynamic English USD room sections without stale references', async (count) => {
+    const nights = Array.from({ length: count }, (_, index) => usdNight(`2026-10-${String(24 + index).padStart(2, '0')}`, index + 1));
+    const sheet = (await buildUsdWorkbook(englishModel(nights))).worksheets[0];
+    expect(sheet.getCell('B14').value).toBe(count ? 'rooms breakdon' : ' Total Room charges in USD');
+    expect(sheet.getImages()).toHaveLength(1);
+    if (count > 0) {
+      let cursor = 14;
+      let expectedLastTotal = 14;
+      for (let index = 0; index < count; index += 1) {
+        expectedLastTotal = cursor + 3 + index;
+        cursor = expectedLastTotal + 2;
+      }
+      expect(sheet.getCell(`F${expectedLastTotal}`).value).toMatchObject({ formula: expect.stringContaining('SUM(F') });
+      expect(sheet.getCell(`F${cursor}`).value).toMatchObject({ formula: expect.stringContaining(`F${expectedLastTotal}`) });
+    }
+    let finalRow = 0;
+    sheet.getColumn(2).eachCell((cell, rowNumber) => {
+      if (cell.value === 'Toal rooms is USD') finalRow = rowNumber;
+    });
+    expect(finalRow).toBeGreaterThan(0);
+    const finalFormula = sheet.getCell(`F${finalRow}`).value;
+    expect(finalFormula).toMatchObject({ formula: expect.stringContaining('F') });
+    expect(finalFormula).toMatchObject({ formula: expect.stringContaining('F') });
+    expect(sheet.pageSetup.printArea).toMatch(/^A1:G\d+$/);
+  });
+
+  it('preserves USD blank propagation without VAT or currency conversion', async () => {
+    const incomplete = usdNight('2026-10-24', 1);
+    incomplete.roomCharges[0] = { ...incomplete.roomCharges[0], rate: { kind: 'missing' }, financialCompleteness: 'incomplete', pricingStatus: 'missing-price' };
+    const complimentaryStaff = [{ id: 'staff-1', type: 'staff' as const, amount: { kind: 'numeric' as const, value: '30' }, number: { kind: 'numeric' as const, value: '2' }, currency: 'USD' as const, completeness: 'complete' as const, issues: [] }];
+    const sheet = (await buildUsdWorkbook({ ...englishModel([incomplete]), complimentaryStaff })).worksheets[0];
+    expect(sheet.getCell('F16').value).toMatchObject({ formula: expect.stringContaining('D16') });
+    expect(sheet.getCell('F17').value).toMatchObject({ formula: expect.stringContaining('COUNTIF(F16:F16') });
+    expect(sheet.getCell('F23').value).toMatchObject({ formula: expect.stringContaining('C23*D23*E23') });
+    expect(sheet.getCell('F23').value).not.toMatchObject({ formula: expect.stringContaining('1.18') });
   });
 
   it('adds Additional Charges sections to Hebrew and USD exports', async () => {
@@ -307,8 +527,10 @@ describe('Excel builders', () => {
 
     const usd = await buildUsdWorkbook({ ...usdModel, additionalCharges: [{ ...additionalCharges[0], currency: 'ILS' }] }, 'ILS');
     const usdSheet = usd.worksheets[0];
-    expect(usdSheet.getCell('B20').value).toBe('Additional Charges');
-    expect(usdSheet.getCell('F22').value).toMatchObject({ formula: expect.stringContaining('C22*D22*E22') });
+    expect(usdSheet.getCell('B31').value).toBe('Extrot in Nis');
+    expect(usdSheet.getCell('B33').value).toBe('Breakfast');
+    expect(usdSheet.getCell('F33').value).toMatchObject({ formula: expect.stringContaining('C33*D33*E33') });
+    expect(usdSheet.getCell('F34').value).toMatchObject({ formula: expect.stringContaining('F33:F33') });
   });
 
   it('exports Free & Staff rows separately without VAT or room-total inclusion', async () => {
@@ -330,8 +552,11 @@ describe('Excel builders', () => {
 
     const usd = await buildUsdWorkbook({ ...usdModel, complimentaryStaff: [{ ...complimentaryStaff[0], currency: 'ILS' }] }, 'ILS');
     const usdSheet = usd.worksheets[0];
-    expect(usdSheet.getCell('B20').value).toBe('Free & Staff');
-    expect(usdSheet.getCell('F22').value).toMatchObject({ formula: expect.stringContaining('C22*D22') });
+    expect(usdSheet.getCell('B21').value).toBe('Free and Staff');
+    expect(usdSheet.getCell('B23').value).toBe('Free');
+    expect(usdSheet.getCell('F23').value).toMatchObject({ formula: expect.stringContaining('C23*D23*E23') });
+    expect(usdSheet.getCell('F26').value).toMatchObject({ formula: expect.stringContaining('C26*D26*E26') });
+    expect(usdSheet.getCell('B32').value).toBe('Extrot in Nis');
   });
 
   it('renders empty staff and extras sections without placeholder detail rows', async () => {
