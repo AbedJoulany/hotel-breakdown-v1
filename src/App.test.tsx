@@ -87,6 +87,32 @@ describe('Home', () => {
     expect(screen.getByText('Coverage: 2026-10-24 to 2026-10-24')).toBeInTheDocument();
   });
 
+  it('restores Additional Charges and Complimentary & Staff rows from Continue Project', async () => {
+    loadWorkspaceSnapshot.mockResolvedValue({
+      project: {
+        id: 'project-saved', name: 'Saved Project', createdAt: '2026-10-24T00:00:00.000Z', updatedAt: '2026-10-24T00:00:00.000Z',
+        reportIds: [], selectedGroupName: null, dateRange: { start: null, end: null },
+      },
+      reports: [], analyses: [], analysis: null, corrections: [], correctionHistory: [], pricingRules: [],
+      additionalCharges: [{ id: 'charge-saved', description: 'Breakfast', price: '25', quantity: '2', number: '1', currency: 'USD' }],
+      complimentaryStaff: [{ id: 'staff-saved', type: 'staff', amount: '30', number: '1', currency: 'ILS' }],
+    });
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue Project' }));
+    await waitFor(() => expect(screen.getByText('Saved project restored.')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Additional Charges' }));
+    expect(screen.getByLabelText('Description 1')).toHaveValue('Breakfast');
+    expect(screen.getByLabelText('Price 1')).toHaveValue(25);
+    expect(screen.getByLabelText('Currency 1')).toHaveValue('USD');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Complimentary & Staff' }));
+    expect(screen.getByLabelText('Complimentary Type 1')).toHaveValue('staff');
+    expect(screen.getByLabelText('Complimentary Amount 1')).toHaveValue(30);
+    expect(screen.getByLabelText('Complimentary Currency 1')).toHaveValue('ILS');
+  });
+
   it('opens the workspace placeholder from New Project', () => {
     render(<App />);
 
@@ -192,6 +218,7 @@ describe('Home', () => {
     expect(screen.getByRole('heading', { name: 'Export Preview' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Additional Charges' }));
     expect(screen.getByRole('heading', { name: 'Additional Charges' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Export Preview' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Folio Comparison' }));
 
     expect(screen.getByText('Matched')).toBeInTheDocument();
@@ -254,6 +281,61 @@ describe('Home', () => {
     expect(screen.getByRole('heading', { name: 'Room-Nights: 1' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-10-26' } });
     expect(screen.getByText('Missing report date(s) in selected range: 2026-10-25, 2026-10-26')).toBeInTheDocument();
+  });
+
+  it('adds, calculates, and deletes additional charge rows', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'New Project' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Additional Charges' }));
+
+    fireEvent.change(screen.getByLabelText('Description 1'), { target: { value: 'Breakfast' } });
+    fireEvent.change(screen.getByLabelText('Price 1'), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText('Quantity 1'), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText('Currency 1'), { target: { value: 'USD' } });
+    expect(screen.getByLabelText('Total 1')).toHaveTextContent('50.00');
+    expect(screen.getByLabelText('Number 1')).toHaveValue(1);
+    await waitFor(() => expect(saveWorkspaceSnapshot).toHaveBeenLastCalledWith(expect.objectContaining({
+      additionalCharges: [expect.objectContaining({ description: 'Breakfast', price: '25', quantity: '2', number: '1', currency: 'USD' })],
+    })));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add row' }));
+    expect(screen.getByLabelText('Description 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete row 2' }));
+    expect(screen.queryByLabelText('Description 2')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete row 1' })).toBeDisabled();
+  });
+
+  it('adds, calculates, and persists Complimentary and Staff rows', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'New Project' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Complimentary & Staff' }));
+
+    fireEvent.change(screen.getByLabelText('Complimentary Type 1'), { target: { value: 'staff' } });
+    fireEvent.change(screen.getByLabelText('Complimentary Amount 1'), { target: { value: '30' } });
+    fireEvent.change(screen.getByLabelText('Complimentary Currency 1'), { target: { value: 'USD' } });
+    expect(screen.getByLabelText('Complimentary Number 1')).toHaveValue(1);
+    expect(screen.getByLabelText('Complimentary Total 1')).toHaveTextContent('30.00');
+    await waitFor(() => expect(saveWorkspaceSnapshot).toHaveBeenLastCalledWith(expect.objectContaining({
+      complimentaryStaff: [expect.objectContaining({ type: 'staff', amount: '30', number: '1', currency: 'USD' })],
+    })));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add row' }));
+    expect(screen.getByLabelText('Complimentary Type 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete row 2' }));
+    expect(screen.queryByLabelText('Complimentary Type 2')).not.toBeInTheDocument();
+  });
+
+  it('shows Complimentary & Staff input validation without changing financial rules', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'New Project' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Complimentary & Staff' }));
+
+    expect(screen.getByRole('alert', { name: 'Complimentary and staff validation' })).toHaveTextContent('Amount is required.');
+    fireEvent.change(screen.getByLabelText('Complimentary Amount 1'), { target: { value: '-5' } });
+    fireEvent.change(screen.getByLabelText('Complimentary Number 1'), { target: { value: '0' } });
+    expect(screen.getByRole('alert', { name: 'Complimentary and staff validation' })).toHaveTextContent('Amount must be a valid non-negative number.');
+    expect(screen.getByRole('alert', { name: 'Complimentary and staff validation' })).toHaveTextContent('Number must be a whole number greater than 0.');
+    expect(screen.getByLabelText('Complimentary Total 1')).toHaveTextContent('—');
   });
 
   it('processes multiple group reports and keeps one active report per date', async () => {

@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import type { CanonicalExportModel, CanonicalRoomChargeRow } from '../domain/export/models';
+import type { CanonicalExportModel, CanonicalAdditionalChargeRow, CanonicalRoomChargeRow } from '../domain/export/models';
 import { validateExport } from '../domain/export/exportValidation';
 import { calculateFinancialPreview } from '../domain/pricing/financialCalculator';
 import type { ExportLanguage } from '../domain/export/models';
@@ -18,7 +18,7 @@ export default function ExportPreview({ model, language, rateOverrides, onRateCh
     return <p className="muted">Select a group and upload reports before opening Export Preview.</p>;
   }
 
-  const validation = validateExport(model);
+  const validation = validateExport(model, language);
   const financial = calculateFinancialPreview(model, language);
   const totals = financial.totals[language === 'hebrew' ? 'ILS' : 'USD'];
   return (
@@ -60,8 +60,42 @@ export default function ExportPreview({ model, language, rateOverrides, onRateCh
           </div>
         </section>
       ))}
+      {(model.additionalCharges ?? []).length > 0 && (
+        <section className="export-night" aria-labelledby="export-additional-charges-title">
+          <h2 id="export-additional-charges-title">Additional Charges</h2>
+          <div className="export-table" role="table" aria-label="Additional charges for export">
+            <div className="export-table-row export-table-header additional-export-row" role="row">
+              <span>Description</span><span>Price</span><span>Quantity</span><span>Number</span><span>Currency</span><span>Total</span>
+            </div>
+            {(model.additionalCharges ?? []).map((row) => (
+              <AdditionalChargePreviewRow
+                key={row.id}
+                row={row}
+                amount={financial.additionalRows.find((item) => item.groupedRowId === `additional:${row.id}`)?.amount ?? null}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </section>
   );
+}
+
+function AdditionalChargePreviewRow({ row, amount }: { row: CanonicalAdditionalChargeRow; amount: string | null }) {
+  return (
+    <div className={`export-table-row additional-export-row${row.financialCompleteness === 'incomplete' ? ' incomplete' : ''}`} role="row">
+      <span>{row.description || 'Unresolved description'}</span>
+      <span>{displayRate(row.price)}</span>
+      <span>{displayRate(row.quantity)}</span>
+      <span>{displayRate(row.number)}</span>
+      <span>{row.currency}</span>
+      <span>{amount ?? '—'}</span>
+    </div>
+  );
+}
+
+function displayRate(rate: CanonicalAdditionalChargeRow['price']): string {
+  return rate.kind === 'numeric' ? rate.value : rate.kind === 'textual' ? rate.raw : '—';
 }
 
 function PreviewRow({ row, language, override, onRateChange, amount }: {

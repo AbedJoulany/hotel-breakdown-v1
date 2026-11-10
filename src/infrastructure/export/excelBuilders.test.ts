@@ -261,4 +261,22 @@ describe('Excel builders', () => {
     expect(sheet.views[0].rightToLeft).toBe(false);
     expect(sheet.getImages()).toHaveLength(1);
   });
+
+  it('adds Additional Charges sections to Hebrew and USD exports', async () => {
+    const additionalCharges = [{
+      id: 'charge-1', description: 'Breakfast', price: { kind: 'numeric' as const, value: '25' },
+      quantity: { kind: 'numeric' as const, value: '2' }, number: { kind: 'numeric' as const, value: '1' },
+      currency: 'ILS' as const, financialCompleteness: 'complete' as const, issues: [],
+    }];
+    const hebrew = await buildHebrewWorkbook({ ...model([night('2026-10-24', 1)]), additionalCharges });
+    const hebrewSheet = hebrew.worksheets[0];
+    expect(hebrewSheet.getCell('B23').value).toBe('עלויות נוספות');
+    expect(hebrewSheet.getCell('H25').value).toMatchObject({ formula: expect.stringContaining('F25+G25') });
+    expect(hebrewSheet.pageSetup.printArea).toBe('A3:H26');
+
+    const usd = await buildUsdWorkbook({ ...usdModel, additionalCharges: [{ ...additionalCharges[0], currency: 'USD' }] });
+    const usdSheet = usd.worksheets[0];
+    expect(usdSheet.getCell('B20').value).toBe('Additional Charges');
+    expect(usdSheet.getCell('F22').value).toMatchObject({ formula: expect.stringContaining('C22*D22*E22') });
+  });
 });

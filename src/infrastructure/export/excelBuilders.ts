@@ -124,8 +124,65 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
     : '=""';
   writeHebrewTotalRow(worksheet, combinedRow, labels.includingVat, combinedFormula, HEBREW_TEMPLATE_STYLE.colors.overall, style, 'combined');
 
-  worksheet.pageSetup.printArea = `A3:G${combinedRow}`;
+  let endRow = combinedRow;
+  if (model.additionalCharges?.length) {
+    endRow += 2;
+    endRow = writeHebrewAdditionalChargesSection(worksheet, endRow, model, style);
+  }
+
+  worksheet.pageSetup.printArea = `A3:${model.additionalCharges?.length ? 'H' : 'G'}${endRow}`;
   return workbook;
+}
+
+function writeHebrewAdditionalChargesSection(
+  worksheet: ExcelJS.Worksheet,
+  startRow: number,
+  model: CanonicalExportModel,
+  style: VisualStyle,
+): number {
+  worksheet.mergeCells(`B${startRow}:H${startRow}`);
+  worksheet.getCell(`B${startRow}`).value = 'עלויות נוספות';
+  styleMergedRow(worksheet, startRow, 2, 8, styleHebrewSection, style);
+  const headerRow = startRow + 1;
+  ['תיאור', 'מחיר', 'כמות', 'מספר', 'לפני מע״מ', 'מע״מ 18%', 'סה״כ'].forEach((value, index) => {
+    const cell = worksheet.getCell(headerRow, index + 2);
+    cell.value = value;
+    styleHebrewHeader(cell, style, index === 0, index === 6);
+  });
+  const firstRow = headerRow + 1;
+  model.additionalCharges?.forEach((charge, index) => {
+    const row = firstRow + index;
+    worksheet.getCell(`B${row}`).value = `${charge.description || 'תיאור לא פתור'}${charge.currency !== 'ILS' ? ` · ${charge.currency}` : ''}`;
+    worksheet.getCell(`C${row}`).value = charge.currency === 'ILS' && charge.price.kind === 'numeric' ? Number(charge.price.value) : null;
+    worksheet.getCell(`D${row}`).value = charge.quantity.kind === 'numeric' ? Number(charge.quantity.value) : null;
+    worksheet.getCell(`E${row}`).value = charge.number.kind === 'numeric' ? Number(charge.number.value) : null;
+    worksheet.getCell(`F${row}`).value = charge.financialCompleteness === 'complete' && charge.currency === 'ILS'
+      ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` }
+      : { formula: '=""' };
+    worksheet.getCell(`G${row}`).value = { formula: `=IF(F${row}="","",F${row}*18%)` };
+    worksheet.getCell(`H${row}`).value = { formula: `=IF(F${row}="","",F${row}+G${row})` };
+    for (let column = 2; column <= 8; column += 1) {
+      const cell = worksheet.getCell(row, column);
+      cell.font = { name: style.fontName, size: style.bodySize, color: { argb: style.border } };
+      cell.alignment = { horizontal: 'center', ...(column === 2 ? { readingOrder: 'rtl' as const } : {}) };
+      cell.border = { top: { style: 'thin', color: { argb: style.border } }, bottom: { style: 'thin', color: { argb: style.border } }, left: { style: column === 2 ? 'medium' : 'thin', color: { argb: style.border } }, right: { style: column === 8 ? 'medium' : 'thin', color: { argb: style.border } } };
+      if (charge.financialCompleteness === 'incomplete') cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.warningFill } };
+    }
+    for (const column of ['C', 'F', 'G', 'H']) worksheet.getCell(`${column}${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+  });
+  const lastRow = firstRow + (model.additionalCharges?.length ?? 0) - 1;
+  const totalRow = lastRow + 1;
+  worksheet.mergeCells(`B${totalRow}:E${totalRow}`);
+  worksheet.getCell(`B${totalRow}`).value = 'סה״כ עלויות נוספות';
+  for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(totalRow, column), style, 'subtotal', style.subtotalFill);
+  worksheet.getCell(`F${totalRow}`).value = { formula: `=IF(COUNTIF(F${firstRow}:F${lastRow},"")>0,"",SUM(F${firstRow}:F${lastRow}))` };
+  worksheet.getCell(`G${totalRow}`).value = { formula: `=IF(COUNTIF(G${firstRow}:G${lastRow},"")>0,"",SUM(G${firstRow}:G${lastRow}))` };
+  worksheet.getCell(`H${totalRow}`).value = { formula: `=IF(COUNTIF(H${firstRow}:H${lastRow},"")>0,"",SUM(H${firstRow}:H${lastRow}))` };
+  for (const column of ['F', 'G', 'H']) {
+    styleHebrewTotalValue(worksheet.getCell(`${column}${totalRow}`), style, 'subtotal', style.subtotalFill);
+    worksheet.getCell(`${column}${totalRow}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+  }
+  return totalRow;
 }
 
 function writeHebrewRoomSection(
@@ -398,8 +455,74 @@ async function buildWorkbook(model: CanonicalExportModel, language: ExportLangua
   styleSubtotalLabel(worksheet.getCell(`B${row}`), style);
   worksheet.getCell(`${overallColumn}${row}`).value = { formula: `${overallColumn}${overallRow}` };
   styleSubtotal(worksheet.getCell(`${overallColumn}${row}`), style);
+  if (model.additionalCharges?.length) {
+    row += 2;
+    row = writeAdditionalChargesSection(worksheet, row, model, language, targetCurrency, style, lastColumn);
+  }
   worksheet.pageSetup.printArea = `A1:${columnLetter(lastColumn)}${row}`;
   return workbook;
+}
+
+function writeAdditionalChargesSection(
+  worksheet: ExcelJS.Worksheet,
+  startRow: number,
+  model: CanonicalExportModel,
+  language: ExportLanguage,
+  targetCurrency: string,
+  style: VisualStyle,
+  lastColumn: number,
+): number {
+  worksheet.mergeCells(`B${startRow}:${columnLetter(lastColumn)}${startRow}`);
+  worksheet.getCell(`B${startRow}`).value = language === 'hebrew' ? 'עלויות נוספות' : 'Additional Charges';
+  styleMergedRow(worksheet, startRow, 2, lastColumn, styleSection, style);
+  const headerRow = startRow + 1;
+  const headers = language === 'hebrew'
+    ? ['תיאור', 'מחיר', 'כמות', 'מספר', 'לפני מע״מ', 'מע״מ 18%', 'סה״כ']
+    : ['Description', 'Price', 'Quantity', 'Number', 'Total'];
+  headers.forEach((value, index) => {
+    const cell = worksheet.getCell(headerRow, index + 2);
+    cell.value = value;
+    styleHeader(cell, style, index === 0, index === headers.length - 1);
+  });
+  const firstRow = headerRow + 1;
+  model.additionalCharges?.forEach((charge, index) => {
+    const row = firstRow + index;
+    const beforeVatColumn = language === 'hebrew' ? 'F' : 'F';
+    const totalColumn = language === 'hebrew' ? 'H' : 'F';
+    worksheet.getCell(`B${row}`).value = `${charge.description || 'Unresolved description'}${charge.currency !== targetCurrency ? ` · ${charge.currency}` : ''}`;
+    worksheet.getCell(`C${row}`).value = charge.currency === targetCurrency && charge.price.kind === 'numeric' ? Number(charge.price.value) : null;
+    worksheet.getCell(`D${row}`).value = charge.quantity.kind === 'numeric' ? Number(charge.quantity.value) : null;
+    worksheet.getCell(`E${row}`).value = charge.number.kind === 'numeric' ? Number(charge.number.value) : null;
+    const complete = charge.financialCompleteness === 'complete' && charge.currency === targetCurrency;
+    if (language === 'hebrew') {
+      worksheet.getCell(`F${row}`).value = complete ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` } : { formula: '=""' };
+      worksheet.getCell(`G${row}`).value = { formula: `=IF(F${row}="","",F${row}*18%)` };
+      worksheet.getCell(`H${row}`).value = { formula: `=IF(F${row}="","",F${row}+G${row})` };
+    } else {
+      worksheet.getCell(totalColumn + row).value = complete ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` } : { formula: '=""' };
+    }
+    for (let column = 2; column <= lastColumn; column += 1) {
+      const cell = worksheet.getCell(row, column);
+      cell.font = { name: style.fontName, size: style.bodySize, color: { argb: style.border } };
+      cell.alignment = { horizontal: 'center', ...(column === 2 && language === 'hebrew' ? { readingOrder: 'rtl' as const } : {}) };
+      cell.border = { top: { style: 'thin', color: { argb: style.border } }, bottom: { style: 'thin', color: { argb: style.border } }, left: { style: column === 2 ? 'medium' : 'thin', color: { argb: style.border } }, right: { style: column === lastColumn ? 'medium' : 'thin', color: { argb: style.border } } };
+      if (!complete) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.warningFill } };
+    }
+    if (language === 'hebrew') {
+      for (const column of ['C', 'F', 'G', 'H']) worksheet.getCell(`${column}${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
+    } else {
+      worksheet.getCell(`C${row}`).numFmt = '"$" #,##0.00;[Red]-"$" #,##0.00';
+      worksheet.getCell(`F${row}`).numFmt = '"$" #,##0.00;[Red]-"$" #,##0.00';
+    }
+  });
+  const lastRow = firstRow + (model.additionalCharges?.length ?? 0) - 1;
+  const totalRow = lastRow + 1;
+  const totalColumn = language === 'hebrew' ? 'H' : 'F';
+  worksheet.getCell(`B${totalRow}`).value = language === 'hebrew' ? 'סה״כ עלויות נוספות כולל מע״מ' : 'Total Additional Charges';
+  styleSubtotalLabel(worksheet.getCell(`B${totalRow}`), style);
+  worksheet.getCell(`${totalColumn}${totalRow}`).value = { formula: `=IF(COUNTIF(${totalColumn}${firstRow}:${totalColumn}${lastRow},"")>0,"",SUM(${totalColumn}${firstRow}:${totalColumn}${lastRow}))` };
+  styleSubtotal(worksheet.getCell(`${totalColumn}${totalRow}`), style);
+  return totalRow;
 }
 
 function writeChargeRow(

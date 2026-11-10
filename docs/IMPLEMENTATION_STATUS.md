@@ -18,7 +18,7 @@ Last reviewed: 2026-11-07
 - Home screen with `New Project` and `Continue Project` actions.
 - Initial Workspace screen.
 - `Folio Comparison` is available as a separate view within the active project, with navigation back to Workspace and preserved in-memory panel state while switching views.
-- `Complimentary & Staff` and `Additional Charges` remain placeholder views. `Excel Export` is implemented as Export Preview with Draft/Final workbook actions.
+- `Complimentary & Staff` has a persisted manual-entry table with `Free`/`Staff` type, amount, number, row total, and `ILS`/`USD` currency selection, plus input validation warnings; its Financial Summary and Excel mapping remain deferred. `Additional Charges` has a persisted manual-entry table with description, price, quantity, number, row total, and `ILS`/`USD` currency selection. Additional Charges are included in Export Preview and generated Excel sections; Hebrew applies 18% VAT to eligible ILS charges, USD applies no VAT, and currency mismatches produce warnings without conversion. `Excel Export` is implemented as Export Preview with Draft/Final workbook actions.
 - Local PDF file selection from the browser.
 - In-memory project state for the current workspace.
 - Multiple Group Report selection and sequential processing.
@@ -134,7 +134,7 @@ The following V1 capabilities are agreed requirements but are not implemented ye
 - Independent project report snapshots and saved report collections.
 - Final correction validation and blocking completion while material conflicts remain unresolved.
 - Ambiguous group-name collision detection and user-assisted resolution.
-- Complimentary discounts and additional charges.
+- Complimentary/Staff financial rules and Additional Charges mapping for future template fields beyond the implemented generated workbook section.
 - Additional currencies beyond ILS/USD and currency conversion.
 - Expanded financial Preview drill-down and persistence of session overrides.
 - Full project backup and restore.
@@ -149,7 +149,7 @@ These items are recommendations, not completed functionality.
 ## Unresolved
 
 - Practical browser-storage limits and recovery behavior.
-- Complimentary/Staff and Additional Charges workbook mapping.
+- Complimentary/Staff workbook mapping and calculations.
 - Final persistence schema and backup file format.
 - Whether and how duplicate-room conflicts should be corrected in the UI.
 - Remaining manual-field behavior in the reference templates is out of scope because generated workbooks are built from scratch.

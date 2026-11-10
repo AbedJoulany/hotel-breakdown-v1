@@ -61,7 +61,7 @@ Implemented UI behavior in `src/App.tsx`:
 
 - Home actions for `New Project` and `Continue Project`.
 - Initial Workspace view and a separate `Folio Comparison` view selected through the existing `View` state; no routing library is used.
-- Placeholder `Complimentary & Staff`, `Additional Charges`, and `Excel Export` views selected through the same `View` state; they do not own calculations or persistence.
+- `Complimentary & Staff`, `Additional Charges`, and `Excel Export` views are selected through the same `View` state. `Complimentary & Staff` and `Additional Charges` own only manual row editing and delegate persistence to the existing workspace snapshot; Complimentary/Staff financial rules remain outside the UI.
 - Local single or multiple PDF selection.
 - In-memory active report collection with one report per embedded date.
 - Display of report dates, detected groups, unique room counts, and conflict warnings.
@@ -152,7 +152,7 @@ npm run build
 The following boundaries are planned but not implemented:
 
 - `persistence`: IndexedDB/Dexie adapter and project/report snapshot storage.
-- `financial`: discounts, additional charges, export action, and broader currency support; validation contracts are implemented.
+- `financial`: discounts, Additional Charges VAT/export mapping beyond the generated section, export action, and broader currency support; validation contracts are implemented.
 - `folio`: Folio extraction, totals, room/guest comparison, night aggregation, tolerance, and acknowledgment are implemented for inspected layouts.
 - `workflow`: project navigation, completion status, acknowledgments, and blocking validation.
 
@@ -196,9 +196,9 @@ Planned but not currently installed or used:
 - The current snapshot persistence does not retain original PDF binaries, provide backup/restore, or block completion for unresolved conflicts.
 - Pricing-rule precedence is unresolved.
 - Final Export uses the approved issue severity policy; unresolved Duplicate Room Conflict and Unresolved Occupancy policy details remain open.
-- Complimentary discount formula is unresolved.
+- Complimentary discount formula and Free/Staff financial treatment are unresolved.
 - Backup schema and storage-failure behavior are unresolved.
-- Complimentary/Staff and Additional Charges remain outside the implemented workbook sections.
+- Complimentary/Staff remains outside the implemented workbook sections. Additional Charges are implemented as a generated separate export section with currency-specific VAT behavior; reference-template-specific field mapping remains unresolved.
 
 ## Architectural change rule
 

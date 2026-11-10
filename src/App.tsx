@@ -25,6 +25,10 @@ import { buildExportData, applyRateOverrides } from './application/export/buildE
 import { validateExport } from './domain/export/exportValidation';
 import type { ExportLanguage } from './domain/export/models';
 import { buildHebrewWorkbook, buildUsdWorkbook, downloadWorkbook } from './infrastructure/export/excelBuilders';
+import AdditionalChargesPanel from './components/AdditionalChargesPanel';
+import { createAdditionalChargeRow, type AdditionalChargeRow } from './domain/charges/models';
+import ComplimentaryStaffPanel from './components/ComplimentaryStaffPanel';
+import { createComplimentaryStaffRow, type ComplimentaryStaffRow } from './domain/charges/complimentaryStaffModels';
 
 type View = 'home' | 'workspace' | 'folio' | 'complimentary-staff' | 'additional-charges' | 'export';
 type UploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
@@ -50,6 +54,8 @@ function App() {
   const [corrections, setCorrections] = useState<RoomCorrection[]>([]);
   const [correctionHistory, setCorrectionHistory] = useState<RoomCorrection[]>([]);
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [additionalCharges, setAdditionalCharges] = useState<AdditionalChargeRow[]>([createAdditionalChargeRow('additional-charge-1')]);
+  const [complimentaryStaff, setComplimentaryStaff] = useState<ComplimentaryStaffRow[]>([createComplimentaryStaffRow('complimentary-staff-1')]);
   const [exportLanguage, setExportLanguage] = useState<ExportLanguage>('usd');
   const [rateOverrides, setRateOverrides] = useState<Map<string, string>>(new Map());
   const [folioWarningAcknowledgement, setFolioWarningAcknowledgement] = useState<FolioWarningAcknowledgement | null>(null);
@@ -93,8 +99,8 @@ function App() {
     : null;
   const financialValidation = financialSummary ? validateFinancialSummary(financialSummary) : null;
   const baseExportModel = useMemo(() => project?.selectedGroupName
-    ? buildExportData({ reports, selectedGroupName: project.selectedGroupName, corrections, pricingRules })
-    : null, [reports, project?.selectedGroupName, corrections, pricingRules]);
+    ? buildExportData({ reports, selectedGroupName: project.selectedGroupName, corrections, pricingRules, additionalCharges })
+    : null, [reports, project?.selectedGroupName, corrections, pricingRules, additionalCharges]);
   const exportModel = useMemo(() => baseExportModel ? applyRateOverrides(baseExportModel, rateOverrides) : null, [baseExportModel, rateOverrides]);
   const selectedFolioGroupRooms: GroupRoomForFolioComparison[] = project?.selectedGroupName
     ? analyses.flatMap((report) => report.groups
@@ -114,9 +120,9 @@ function App() {
       return;
     }
 
-    void saveWorkspaceSnapshot({ project, reports, analyses, analysis, corrections, correctionHistory, pricingRules, folioWarningAcknowledgement })
+    void saveWorkspaceSnapshot({ project, reports, analyses, analysis, corrections, correctionHistory, pricingRules, additionalCharges, complimentaryStaff, folioWarningAcknowledgement })
       .catch(() => setError('Could not save the workspace locally.'));
-  }, [analysis, analyses, project, reports, corrections, correctionHistory, pricingRules, folioWarningAcknowledgement]);
+  }, [analysis, analyses, project, reports, corrections, correctionHistory, pricingRules, additionalCharges, complimentaryStaff, folioWarningAcknowledgement]);
 
   useEffect(() => {
     if (!baseExportModel) return;
@@ -179,7 +185,7 @@ function App() {
 
   async function handleExcelExport(final: boolean) {
     if (!exportModel) return;
-    const validation = validateExport(exportModel);
+    const validation = validateExport(exportModel, exportLanguage);
     if (final && !validation.canFinal) {
       setError(`Final Export is blocked by ${validation.finalBlockers.length} unresolved issue(s).`);
       return;
@@ -294,6 +300,8 @@ function App() {
     setCorrections([]);
     setCorrectionHistory([]);
     setPricingRules([]);
+    setAdditionalCharges([createAdditionalChargeRow('additional-charge-1')]);
+    setComplimentaryStaff([createComplimentaryStaffRow('complimentary-staff-1')]);
     setFolioWarningAcknowledgement(null);
     setProject(createProject({
       id: `project-${Date.now()}`,
@@ -323,6 +331,8 @@ function App() {
       setCorrections(snapshot.corrections ?? []);
       setCorrectionHistory(snapshot.correctionHistory ?? []);
       setPricingRules(snapshot.pricingRules ?? []);
+      setAdditionalCharges(snapshot.additionalCharges?.length ? snapshot.additionalCharges : [createAdditionalChargeRow('additional-charge-1')]);
+      setComplimentaryStaff(snapshot.complimentaryStaff?.length ? snapshot.complimentaryStaff : [createComplimentaryStaffRow('complimentary-staff-1')]);
       setFolioWarningAcknowledgement(snapshot.folioWarningAcknowledgement ?? null);
       setReportMessage('Saved project restored.');
     } catch {
@@ -699,14 +709,12 @@ function App() {
           <section className="placeholder-screen" hidden={view !== 'complimentary-staff'} aria-labelledby="complimentary-staff-screen-title">
             <p className="eyebrow">Project workspace</p>
             <h1 id="complimentary-staff-screen-title">Complimentary &amp; Staff</h1>
-            <p className="placeholder-description">Placeholder screen. Calculation rules for Complimentary and Staff rooms will be added later.</p>
-            <p className="placeholder-status" role="status">Not implemented yet.</p>
+            <ComplimentaryStaffPanel rows={complimentaryStaff} onChange={setComplimentaryStaff} />
           </section>
           <section className="placeholder-screen" hidden={view !== 'additional-charges'} aria-labelledby="additional-charges-screen-title">
             <p className="eyebrow">Project workspace</p>
             <h1 id="additional-charges-screen-title">Additional Charges</h1>
-            <p className="placeholder-description">Placeholder screen. Meals and other additional-charge rules will be added later.</p>
-            <p className="placeholder-status" role="status">Not implemented yet.</p>
+            <AdditionalChargesPanel rows={additionalCharges} onChange={setAdditionalCharges} />
           </section>
           <section className="export-screen" hidden={view !== 'export'} aria-labelledby="export-preview-title">
             <div className="export-language-switcher">

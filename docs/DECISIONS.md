@@ -176,6 +176,20 @@ No additional proposed decision is being recorded in this file. New recommendati
 - **Final policy:** Draft is allowed with warnings. Final is allowed only when no `final-blocker` issues exist. `Missing Price` and `Pricing Conflict` are final blockers.
 - **Visual fidelity:** Generated workbooks remain scratch-built with ExcelJS, while their fonts, colors, boxed borders, portrait print layout, header metadata, and logo placement follow the inspected Hebrew and USD reference workbooks.
 
+### DEC-021 - Additional Charges currency, VAT, and export mapping
+
+- **Status:** Approved; implemented
+- **Decision:** `Additional Charges` remain manually entered independent line items. Each line has a description, price, quantity, number, and one supported currency (`ILS` or `USD`). Currency totals remain separate and no automatic conversion is applied.
+- **VAT:** `Master Hebrew.xlsx` applies 18% VAT to eligible ILS Additional Charges. `Master $.xlsx` applies no VAT to Additional Charges.
+- **Export:** Additional Charges are exported in a separate section. Charges whose currency does not match the selected template remain visible with a clear currency-mismatch warning and are not silently converted or included in the selected template's monetary total.
+- **Reason:** Preserve currency integrity and make unsupported template amounts visible without inventing an exchange rate.
+
+### DEC-022 - Complimentary & Staff entry fields
+
+- **Status:** Approved; entry screen implemented, financial/export behavior not implemented
+- **Decision:** The `Complimentary & Staff` screen uses manual rows with exactly `Type` (`Free` or `Staff`), `Amount`, `Number` (default `1`), `Total` (`Amount × Number`), and `Currency` (`ILS` or `USD`). Rows are persisted in the active workspace snapshot.
+- **Deferred:** These rows are not yet included in Financial Summary or Excel Export. Any discount, VAT, confirmation, room assignment, or staff/free calculation rule requires a separate approval.
+
 ## Unresolved decisions
 
 ### DEC-U002 - Final Export UI and workbook implementation

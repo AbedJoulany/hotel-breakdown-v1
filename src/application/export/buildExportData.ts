@@ -18,6 +18,7 @@ import type {
   PricingStatus,
 } from '../../domain/export/models';
 import type { SupportedCurrency } from '../../domain/pricing/pricingRules';
+import type { AdditionalChargeRow } from '../../domain/charges/models';
 import { ROOM_TYPES } from '../../domain/rooms/roomTypes';
 
 const OCCUPANCY_ORDER: OccupancyCategory[] = [
@@ -37,6 +38,9 @@ export function buildExportData(input: ExportBuildInput): CanonicalExportModel {
   let rowSequence = 0;
   const checkInDates: IsoDate[] = [];
   const checkOutDates: IsoDate[] = [];
+  const additionalCharges = (input.additionalCharges ?? [])
+    .filter((row) => row.description.trim() || row.price.trim() || row.quantity !== '1' || row.number !== '1')
+    .map(toCanonicalAdditionalCharge);
 
   for (const report of input.reports) {
     const group = report.groupSnapshots.find((snapshot) => groupMatchKey(snapshot.groupName) === groupMatchKey(input.selectedGroupName));
@@ -210,10 +214,40 @@ export function buildExportData(input: ExportBuildInput): CanonicalExportModel {
       checkInDate: minDate(checkInDates) ?? nights[0]?.reportDate ?? null,
       checkOutDate: maxDate(checkOutDates) ?? nights.at(-1)?.reportDate ?? null,
       reportDates: nights.map((night) => night.reportDate),
-      currencies: [...new Set(nights.flatMap((night) => night.roomCharges.map((row) => row.currency).filter((currency): currency is SupportedCurrency => currency !== null)))],
+      currencies: [...new Set([
+        ...nights.flatMap((night) => night.roomCharges.map((row) => row.currency).filter((currency): currency is SupportedCurrency => currency !== null)),
+        ...additionalCharges.map((row) => row.currency),
+      ])],
     },
     nights,
-    warnings,
+    additionalCharges,
+    warnings: [...warnings, ...additionalCharges.flatMap((row) => row.issues)],
+  };
+}
+
+function toCanonicalAdditionalCharge(row: AdditionalChargeRow) {
+  const price = toRateValue(row.price);
+  const quantity = toRateValue(row.quantity);
+  const number = toRateValue(row.number);
+  const issues = [] as ExportIssue[];
+  if (price.kind !== 'numeric') {
+    issues.push({ code: 'additional-charge-missing-price', severity: 'warning', affects: 'financial', message: `Additional charge "${row.description || 'Unnamed'}" has no valid price`, sourceFactIds: [] });
+  }
+  if (quantity.kind !== 'numeric' || number.kind !== 'numeric') {
+    issues.push({ code: 'additional-charge-invalid-multiplier', severity: 'warning', affects: 'financial', message: `Additional charge "${row.description || 'Unnamed'}" has an invalid quantity or number`, sourceFactIds: [] });
+  }
+  if (!row.description.trim()) {
+    issues.push({ code: 'additional-charge-missing-description', severity: 'warning', affects: 'data', message: 'Additional charge description is missing', sourceFactIds: [] });
+  }
+  return {
+    id: row.id,
+    description: row.description,
+    price,
+    quantity,
+    number,
+    currency: row.currency,
+    financialCompleteness: issues.some((issue) => issue.affects === 'financial') ? 'incomplete' as const : 'complete' as const,
+    issues,
   };
 }
 

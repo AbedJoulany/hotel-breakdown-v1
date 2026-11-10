@@ -3,6 +3,8 @@ import type { Project } from '../../domain/projects/models';
 import type { ActiveReportDocument } from '../../domain/reports/models';
 import type { RoomCorrection } from '../../domain/reports/roomCorrections';
 import type { PricingRule } from '../../domain/pricing/pricingRules';
+import type { AdditionalChargeRow } from '../../domain/charges/models';
+import type { ComplimentaryStaffRow } from '../../domain/charges/complimentaryStaffModels';
 
 export interface FolioWarningAcknowledgement {
   folioFileHash: string;
@@ -22,6 +24,8 @@ export interface WorkspaceSnapshot {
   corrections: RoomCorrection[];
   correctionHistory: RoomCorrection[];
   pricingRules: PricingRule[];
+  additionalCharges?: AdditionalChargeRow[];
+  complimentaryStaff?: ComplimentaryStaffRow[];
   folioWarningAcknowledgement?: FolioWarningAcknowledgement | null;
 }
 

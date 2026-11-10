@@ -9,6 +9,7 @@ export interface FinancialRowResult {
 
 export interface FinancialPreview {
   rows: FinancialRowResult[];
+  additionalRows: FinancialRowResult[];
   nightlyTotals: Record<string, Record<SupportedCurrency, string | null>>;
   totals: Record<SupportedCurrency, string | null>;
 }
@@ -37,8 +38,21 @@ export function calculateFinancialPreview(model: CanonicalExportModel, language:
     }
   }
 
+  const additionalRows = (model.additionalCharges ?? []).map((row) => {
+    const amount = row.financialCompleteness === 'complete' && row.currency === (language === 'hebrew' ? 'ILS' : 'USD')
+      && row.price.kind === 'numeric' && row.quantity.kind === 'numeric' && row.number.kind === 'numeric'
+      ? multiplyDecimal(row.price.value, Number(row.quantity.value) * Number(row.number.value), language === 'hebrew' && row.currency === 'ILS' ? '1.18' : '1')
+      : null;
+    if (row.currency === (language === 'hebrew' ? 'ILS' : 'USD')) {
+      if (amount === null) totals[row.currency] = null;
+      else if (totals[row.currency] !== null) totals[row.currency] = addDecimal(totals[row.currency]!, amount);
+    }
+    return { groupedRowId: `additional:${row.id}`, amount };
+  });
+
   return {
     rows,
+    additionalRows,
     nightlyTotals,
     totals: {
       ILS: totals.ILS === null ? null : roundFinal(totals.ILS),

@@ -87,4 +87,21 @@ describe('buildExportData', () => {
     expect(effective.nights[0].roomCharges[0]).toMatchObject({ pricingStatus: 'resolved', rate: { kind: 'numeric', value: '125.5' } });
     expect(effective.warnings.some((issue) => issue.code === 'missing-price')).toBe(false);
   });
+
+  it('includes completed additional charges without exporting the untouched starter row', () => {
+    const model = buildExportData({
+      reports: [report([room('0524', 2, 1)])],
+      selectedGroupName: 'Group A',
+      corrections: [],
+      pricingRules: [rule('100', 'ILS')],
+      additionalCharges: [
+        { id: 'charge-1', description: 'Breakfast', price: '25', quantity: '2', number: '1', currency: 'ILS' },
+        { id: 'starter', description: '', price: '', quantity: '1', number: '1', currency: 'ILS' },
+      ],
+    });
+
+    expect(model.additionalCharges).toHaveLength(1);
+    expect(model.additionalCharges?.[0]).toMatchObject({ description: 'Breakfast', currency: 'ILS', financialCompleteness: 'complete' });
+    expect(model.warnings).toHaveLength(0);
+  });
 });

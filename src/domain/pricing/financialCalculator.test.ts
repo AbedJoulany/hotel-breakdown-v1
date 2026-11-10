@@ -38,4 +38,18 @@ describe('calculateFinancialPreview', () => {
     expect(result.totals.USD).toBeNull();
     expect(result.nightlyTotals['2026-10-24'].USD).toBeNull();
   });
+
+  it('adds Hebrew VAT to ILS additional charges and keeps USD separate', () => {
+    const base = model('100', 'ILS');
+    const result = calculateFinancialPreview({
+      ...base,
+      additionalCharges: [{
+        id: 'charge-1', description: 'Breakfast', price: { kind: 'numeric', value: '25' },
+        quantity: { kind: 'numeric', value: '2' }, number: { kind: 'numeric', value: '1' },
+        currency: 'ILS', financialCompleteness: 'complete', issues: [],
+      }],
+    }, 'hebrew');
+    expect(result.additionalRows[0].amount).toBe('59');
+    expect(result.totals.ILS).toBe('295');
+  });
 });
