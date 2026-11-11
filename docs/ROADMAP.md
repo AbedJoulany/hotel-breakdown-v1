@@ -132,6 +132,7 @@ Exit condition: Folio remains comparison-only and cannot silently change contrac
 - **Implemented:** reference-aligned fonts, colors, boxed borders, portrait layout, header metadata, logo sizing, and removal of internal preview-check text.
 - **Implemented:** formula assertions, canonical export tests, financial calculator tests, and workbook structure tests.
 - **Completed:** native spreadsheet visual QA was reviewed and confirmed for the generated Hebrew/ILS, English/USD, and English/ILS workbooks.
+- **Implemented:** Excel Export metadata fields are available on the Export screen. Hotel name, group-name override, display-date override, and PM are persisted and mapped to Hebrew and English workbook headers; PM can be sourced from Folio `Confirmation No.`.
 - Keep export language independent from currency.
 
 Exit condition: generated workbooks are validated against approved expected values and do not hide unresolved financial information.

@@ -192,6 +192,13 @@ No additional proposed decision is being recorded in this file. New recommendati
 - **Updated decision:** Hebrew Financial Summary and final Hebrew workbook totals include `Complimentary & Staff` after VAT.
 - **Deferred:** Confirmation, room assignment, and broader staff/free calculation rules require separate approval.
 
+### DEC-023 - Excel Export metadata fields
+
+- **Status:** Approved; implemented
+- **Decision:** Hotel name, export group-name override, display-date override, and PM are edited on the `Excel Export` screen and persisted with the active project. Source Group Report dates and group names remain authoritative for calculations, grouping, pricing, and Folio comparison.
+- **Folio mapping:** When PM is empty, the inspected Folio `Confirmation No.` may populate it. The user can edit PM manually; a later Folio upload does not overwrite a non-empty manual value.
+- **Output mapping:** PM is written to Hebrew `הזמנה` and English `PM`. Hotel name, group name, and display date are written to the corresponding generated workbook header fields.
+
 ## Unresolved decisions
 
 ### DEC-U002 - Final Export UI and workbook implementation
