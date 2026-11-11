@@ -30,4 +30,11 @@ describe('validateExport', () => {
       expect.objectContaining({ code: 'folio-comparison-required', severity: 'warning' }),
     ]));
   });
+
+  it('keeps Draft and Final available when validation issues are present', () => {
+    const result = validateExport({ ...model, warnings: [{ code: 'missing-price', severity: 'final-blocker', affects: 'financial', message: 'Missing price', sourceFactIds: [] }] }, 'usd');
+    expect(result.finalBlockers).toHaveLength(1);
+    expect(result.canDraft).toBe(true);
+    expect(result.canFinal).toBe(true);
+  });
 });

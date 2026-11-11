@@ -10,6 +10,7 @@ describe('parseFolio', () => {
     const folio = parseFolio(pages);
 
     expect(folio.currency).toBe('ILS');
+    expect(folio.confirmationNumber).toBe('161240141');
     expect(folio.totals).toEqual({ ILS: '57,471.90', USD: null });
     expect(folio.entries).toHaveLength(24);
     expect(folio.entries[0]).toMatchObject({

@@ -14,6 +14,10 @@ describe('createProject', () => {
       updatedAt: '2026-11-06T12:00:00.000Z',
       reportIds: [],
       selectedGroupName: null,
+      hotelName: '',
+      pm: '',
+      groupNameOverride: '',
+      reportDateOverride: null,
       dateRange: {
         start: null,
         end: null,

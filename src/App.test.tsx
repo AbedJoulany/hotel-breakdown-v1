@@ -183,6 +183,7 @@ describe('Home', () => {
     parseFolio.mockReturnValue({
       currency: 'ILS',
       totals: { ILS: '100.00', USD: null },
+      confirmationNumber: '161240141',
       entries: [{
         roomNumber: '0524',
         guestName: 'Guest A',
@@ -212,10 +213,26 @@ describe('Home', () => {
     expect(extractPdfTextPages).toHaveBeenCalledTimes(1);
     expect(parseFolio).toHaveBeenCalledTimes(1);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Excel Export' }));
+    expect(screen.getByLabelText('PM / Confirmation number')).toHaveValue('161240141');
+    fireEvent.change(screen.getByLabelText('Hotel name'), { target: { value: 'Orient Jerusalem' } });
+    fireEvent.change(screen.getByLabelText('Group name for export'), { target: { value: 'Edited Group' } });
+    fireEvent.change(screen.getByLabelText('Export date override'), { target: { value: '2026-10-25' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Folio Comparison' }));
+
     fireEvent.click(screen.getByRole('button', { name: 'Complimentary & Staff' }));
     expect(screen.getByRole('heading', { name: 'Complimentary & Staff' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Excel Export' }));
     expect(screen.getByRole('heading', { name: 'Export Preview' })).toBeInTheDocument();
+    expect(screen.getByText('Overall total')).toBeInTheDocument();
+    expect(screen.getByText('Room-Nights')).toBeInTheDocument();
+    expect(screen.getAllByText('Report dates')).not.toHaveLength(0);
+    expect(screen.getByText('Validation warnings')).toBeInTheDocument();
+    expect(screen.getByText('Folio: Complete')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Template preview header' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'עברית / ILS' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'English / USD' }));
+    expect(screen.getByRole('button', { name: 'English / USD' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Additional Charges' }));
     expect(screen.getByRole('heading', { name: 'Additional Charges' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Export Preview' })).not.toBeInTheDocument();
@@ -279,6 +296,12 @@ describe('Home', () => {
     })));
     expect(screen.getByText('Coverage: 2026-10-24 to 2026-10-24')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Room-Nights: 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Collapse' })).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
+    expect(screen.getByRole('button', { name: 'Expand' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Selected group rooms')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(screen.getByText('Selected group rooms')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-10-26' } });
     expect(screen.getByText('Missing report date(s) in selected range: 2026-10-25, 2026-10-26')).toBeInTheDocument();
   });
@@ -420,10 +443,13 @@ describe('Home', () => {
     expect(screen.getByText('1 groups · 2 active report(s)')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Groups for 2026-10-24' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Groups for 2026-10-25' })).toBeInTheDocument();
-    expect(screen.queryByText('0524 · Guest 24')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Select group Etgar-Nof Va Yam on 2026-10-24' }));
     expect(screen.getByText('0524 · Guest 24')).toBeInTheDocument();
     expect(screen.getByText('0525 · Guest 25')).toBeInTheDocument();
+    expect(screen.getByLabelText('Start date')).toHaveAttribute('type', 'date');
+    fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-10-25' } });
+    expect(screen.getByRole('heading', { name: 'Groups for 2026-10-25' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Groups for 2026-10-24' })).not.toBeInTheDocument();
     expect(analyzeGroupReportPdf).toHaveBeenCalledTimes(2);
   });
 

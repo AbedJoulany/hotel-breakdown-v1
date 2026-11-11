@@ -3,7 +3,7 @@ import { calculateFinancialSummary } from './financialSummary';
 import type { PricingRule } from './pricingRules';
 import type { RoomRecord } from '../reports/models';
 
-const room = (roomNumber: string, reportedRate: string | null, adults = 2, children = 1): RoomRecord => ({
+const room = (roomNumber: string, reportedRate: string | null, adults: number | null = 2, children: number | null = 1): RoomRecord => ({
   roomNumber,
   guestName: 'Guest',
   reservationNumber: null,
@@ -62,5 +62,17 @@ describe('calculateFinancialSummary', () => {
 
     expect(summary.charges).toEqual([]);
     expect(summary.roomConflicts).toEqual([{ reportDate: '2026-10-25', roomNumber: '0524' }]);
+  });
+
+  it('reports missing or unsupported occupancy separately from missing prices', () => {
+    const summary = calculateFinancialSummary([
+      { reportDate: '2026-10-25', rooms: [room('0524', null, null, null), room('0525', null, 4, 0)] },
+    ], [rule('ils', '125.00')]);
+
+    expect(summary.unresolvedOccupancies).toEqual([
+      { reportDate: '2026-10-25', roomNumber: '0524' },
+      { reportDate: '2026-10-25', roomNumber: '0525' },
+    ]);
+    expect(summary.missingPrices).toEqual([]);
   });
 });

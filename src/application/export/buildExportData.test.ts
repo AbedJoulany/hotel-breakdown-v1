@@ -41,6 +41,19 @@ const rule = (rate: string, currency: 'ILS' | 'USD' = 'USD'): PricingRule => ({
 });
 
 describe('buildExportData', () => {
+  it('uses editable project metadata for export headers without changing report facts', () => {
+    const model = buildExportData({
+      reports: [report([room('0524', 2, 1)])],
+      selectedGroupName: 'Group A',
+      corrections: [],
+      pricingRules: [rule('100')],
+      exportMetadata: { hotelName: 'Orient Jerusalem', groupName: 'Edited Group', pm: '161240141', reportDate: '2026-10-25' },
+    });
+
+    expect(model.metadata).toMatchObject({ hotelName: 'Orient Jerusalem', groupName: 'Edited Group', pm: '161240141', displayReportDate: '2026-10-25' });
+    expect(model.nights[0]?.reportDate).toBe('2026-10-24');
+  });
+
   it('counts unique rooms and groups identical room-night facts', () => {
     const model = buildExportData({
       reports: [report([room('0524', 2, 1), room('0525', 2, 1)])],

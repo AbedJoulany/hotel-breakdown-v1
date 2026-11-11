@@ -1,6 +1,6 @@
 # Hotel Breakdown V1 - Roadmap
 
-Last reviewed: 2026-11-07
+Last reviewed: 2026-11-11
 
 ## Status labels
 
@@ -12,7 +12,7 @@ Last reviewed: 2026-11-07
 
 ## Current position
 
-The report-processing vertical slice and the first Excel export workflow are implemented. Financial rules, Folio comparison for inspected layouts, night aggregation, amount tolerance, Export Preview, session rate overrides, and generated Hebrew/USD workbooks are available. Original-PDF backup and stabilization remain future work.
+The report-processing vertical slice and the first Excel export workflow are implemented. Financial rules, Folio comparison for inspected layouts, night aggregation, amount tolerance, Export Preview, session rate overrides, and generated Hebrew/English workbooks with USD and ILS choices are available. Original-PDF backup and stabilization remain future work.
 
 ### Phase 0 - Planning and documentation
 
@@ -81,7 +81,7 @@ Exit condition: `Create Project -> Upload Report -> Select Group -> Calculate Ba
 
 - Add explicit handling for ambiguous group-name collisions without merging uncertain groups silently.
 - Add final correction validation and prevent completion while material conflicts remain unresolved.
-- Connect the financial validation gate to the future Final export workflow.
+- Export validation is integrated into Export Preview; Folio Comparison must be complete before download, while validation warnings do not block Draft or Final.
 
 Exit condition: multi-date projects remain traceable and do not silently fabricate or merge source data.
 
@@ -99,7 +99,7 @@ Exit condition: multi-date projects remain traceable and do not silently fabrica
 - Separate currency totals.
 - Financial validation and the pure Final Export readiness gate.
 
-Remaining work: connect the approved rules to the export workflow and add planned discounts/additional charges.
+Remaining work: add planned discounts/additional charges and continue validation of broader financial workflows.
 
 Exit condition: deterministic financial calculations have unit tests for rounding, missing rates, overlapping rules, and multiple currencies.
 
@@ -117,23 +117,22 @@ Exit condition: deterministic financial calculations have unit tests for roundin
 - Approved `0.01` amount tolerance and persisted warning acknowledgment.
 - Placeholder screens for `Complimentary & Staff`, `Additional Charges`, and `Excel Export` with shared project navigation.
 
-Remaining work: visual workbook QA. Unresolved Duplicate Room Conflict and Unresolved Occupancy are classified as Final blockers when emitted by the export model.
+Completed: native spreadsheet visual QA was reviewed and confirmed for the generated Hebrew/ILS, English/USD, and English/ILS workbooks. Unresolved Duplicate Room Conflict and Unresolved Occupancy are classified as Final blockers when emitted by the export model.
 
 Exit condition: Folio remains comparison-only and cannot silently change contract prices or additional charges.
 
 ## Phase 6 - Excel export
 
-**Implemented; remaining review work is limited to native spreadsheet visual QA**
+**Completed**
 
 - **Implemented:** inspected `templates/Master $.xlsx` and `templates/Master Hebrew.xlsx` read-only and recorded their worksheets, input areas, formulas, totals, VAT rows, and ancillary sections.
 - **Implemented:** generate new English and Hebrew workbooks from scratch with one worksheet and dynamic date sections.
-- **Implemented:** Export Preview with session-scoped rate overrides, shared financial calculations, warnings, and Draft/Final actions.
+- **Implemented:** Export Preview with session-scoped rate overrides, shared financial calculations, warnings, and Draft/Final actions. Folio Comparison must be complete before either download, while validation warnings do not block Draft or Final.
 - **Implemented:** workbook structure, guarded formulas, VAT behavior, currencies, print area, direction, and logo embedding.
 - **Implemented:** reference-aligned fonts, colors, boxed borders, portrait layout, header metadata, logo sizing, and removal of internal preview-check text.
 - **Implemented:** formula assertions, canonical export tests, financial calculator tests, and workbook structure tests.
+- **Completed:** native spreadsheet visual QA was reviewed and confirmed for the generated Hebrew/ILS, English/USD, and English/ILS workbooks.
 - Keep export language independent from currency.
-
-Next proposed task: visually review generated workbooks in a native spreadsheet application.
 
 Exit condition: generated workbooks are validated against approved expected values and do not hide unresolved financial information.
 

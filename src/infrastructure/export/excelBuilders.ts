@@ -416,7 +416,7 @@ function writeHebrewTemplateHeader(
   writeHebrewHeaderField(worksheet, 10, labels.group, model.metadata.groupName, style, true, 16);
   writeHebrewHeaderField(worksheet, 11, labels.hotel, model.metadata.hotelName ?? '', style, false, 14);
   writeHebrewHeaderField(worksheet, 12, labels.hostingDate, formatHebrewHostingDate(model), style, false, 14);
-  writeHebrewHeaderField(worksheet, 13, labels.booking, '', style, false, 14, true);
+  writeHebrewHeaderField(worksheet, 13, labels.booking, model.metadata.pm ?? '', style, false, 14, true);
   worksheet.getRow(14).height = HEBREW_TEMPLATE_STYLE.rows.metadataCompact;
 }
 
@@ -465,6 +465,7 @@ function styleHebrewHeaderBottomCell(cell: ExcelJS.Cell, style: VisualStyle, top
 }
 
 function formatHebrewHostingDate(model: CanonicalExportModel): string {
+  if (model.metadata.displayReportDate) return model.metadata.displayReportDate;
   const checkIn = model.metadata.checkInDate;
   const checkOut = model.metadata.checkOutDate;
   if (!checkIn) return checkOut ?? '';
@@ -550,7 +551,7 @@ async function buildEnglishUsdWorkbook(model: CanonicalExportModel, targetCurren
   }
 
   const combinedRoomRow = row;
-  writeEnglishCombinedRow(worksheet, combinedRoomRow, ` Total Room charges in ${targetCurrency}`, roomTotalRefs.length ? `=IF(OR(${roomTotalRefs.map((ref) => `${ref}=""`).join(',')}),"",SUM(${roomTotalRefs.join(',')}))` : '=""');
+  writeEnglishCombinedRow(worksheet, combinedRoomRow, ` Total Room charges in ${targetCurrency}`, roomTotalRefs.length ? `=IF(OR(${roomTotalRefs.map((ref) => `${ref}=""`).join(',')}),"",SUM(${roomTotalRefs.join(',')}))` : '=""', targetCurrency);
   row = combinedRoomRow + 2;
 
   const staff = writeEnglishStaffSection(worksheet, row, model, targetCurrency);
@@ -589,8 +590,8 @@ function writeEnglishHeader(worksheet: ExcelJS.Worksheet, model: CanonicalExport
   const values: Record<number, string> = {
     8: model.metadata.groupName,
     9: model.metadata.hotelName ?? '',
-    10: model.metadata.reportDates.join(', '),
-    11: '',
+    10: model.metadata.displayReportDate ?? model.metadata.reportDates.join(', '),
+    11: model.metadata.pm ?? '',
     12: '',
   };
   for (const row of [8, 9, 10, 11, 12]) {
@@ -655,14 +656,14 @@ function writeEnglishRoomSection(worksheet: ExcelJS.Worksheet, startRow: number,
   night.roomCharges.forEach((charge, index) => writeEnglishRoomDetail(worksheet, firstDetailRow + index, charge, targetCurrency));
   const detailCount = night.roomCharges.length;
   const totalRow = firstDetailRow + detailCount;
-  writeEnglishSubtotalRow(worksheet, totalRow, ' Total Room charges', detailCount ? `=IF(COUNTIF(F${firstDetailRow}:F${totalRow - 1},"")>0,"",SUM(F${firstDetailRow}:F${totalRow - 1}))` : '=""');
+  writeEnglishSubtotalRow(worksheet, totalRow, ' Total Room charges', detailCount ? `=IF(COUNTIF(F${firstDetailRow}:F${totalRow - 1},"")>0,"",SUM(F${firstDetailRow}:F${totalRow - 1}))` : '=""', targetCurrency);
   return { totalRow, nextRow: totalRow + 2 };
 }
 
 function writeEnglishRoomDetail(worksheet: ExcelJS.Worksheet, row: number, charge: CanonicalRoomChargeRow, targetCurrency: 'USD' | 'ILS') {
   const complete = charge.financialCompleteness === 'complete' && charge.currency === targetCurrency && charge.rate.kind === 'numeric';
   const rate = charge.rate.kind === 'numeric' ? Number(charge.rate.value) : null;
-  styleEnglishDetailRow(worksheet, row, `${roomTypeLabel(charge.bookedRoomType, 'usd')} · ${occupancyLabel(charge.occupancyCategory, 'usd')}`, charge.roomCount, complete ? rate : null, charge.nights, `=IF(OR(NOT(ISNUMBER(D${row})),D${row}=""),"",C${row}*D${row}*E${row})`);
+  styleEnglishDetailRow(worksheet, row, `${roomTypeLabel(charge.bookedRoomType, 'usd')} · ${occupancyLabel(charge.occupancyCategory, 'usd')}`, charge.roomCount, complete ? rate : null, charge.nights, `=IF(OR(NOT(ISNUMBER(D${row})),D${row}=""),"",C${row}*D${row}*E${row})`, currencyNumberFormat(targetCurrency));
 }
 
 function styleEnglishSectionRow(worksheet: ExcelJS.Worksheet, row: number, value: string, fontSize = 14, rowHeight: number = ENGLISH_TEMPLATE_STYLE.rows.section) {
@@ -685,7 +686,7 @@ function styleEnglishTableCell(cell: ExcelJS.Cell, value: string, kind: 'header'
   void kind;
 }
 
-function styleEnglishDetailRow(worksheet: ExcelJS.Worksheet, row: number, description: string, rooms: number, cost: number | null, night: number, formula: string) {
+function styleEnglishDetailRow(worksheet: ExcelJS.Worksheet, row: number, description: string, rooms: number, cost: number | null, night: number, formula: string, numberFormat: string = ENGLISH_TEMPLATE_STYLE.numberFormats.usd) {
   const values = [description, rooms, cost, night, { formula }];
   worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.detail;
   values.forEach((value, index) => {
@@ -696,11 +697,11 @@ function styleEnglishDetailRow(worksheet: ExcelJS.Worksheet, row: number, descri
     cell.alignment = { horizontal: 'center', vertical: 'middle' };
     cell.border = { left: { style: index === 0 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: index === 4 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color } };
   });
-  worksheet.getCell(`D${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
-  worksheet.getCell(`F${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+  worksheet.getCell(`D${row}`).numFmt = numberFormat;
+  worksheet.getCell(`F${row}`).numFmt = numberFormat;
 }
 
-function writeEnglishSubtotalRow(worksheet: ExcelJS.Worksheet, row: number, label: string, formula: string) {
+function writeEnglishSubtotalRow(worksheet: ExcelJS.Worksheet, row: number, label: string, formula: string, targetCurrency: 'USD' | 'ILS') {
   worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.subtotal;
   const values = [label, null, null, null, { formula }];
   values.forEach((value, index) => {
@@ -711,10 +712,10 @@ function writeEnglishSubtotalRow(worksheet: ExcelJS.Worksheet, row: number, labe
     cell.alignment = { horizontal: index === 0 ? 'center' : 'center', vertical: 'middle' };
     cell.border = { left: { style: index === 0 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: index === 4 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: ENGLISH_TEMPLATE_STYLE.border };
   });
-  worksheet.getCell(`F${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+  worksheet.getCell(`F${row}`).numFmt = currencyNumberFormat(targetCurrency);
 }
 
-function writeEnglishCombinedRow(worksheet: ExcelJS.Worksheet, row: number, label: string, formula: string) {
+function writeEnglishCombinedRow(worksheet: ExcelJS.Worksheet, row: number, label: string, formula: string, targetCurrency: 'USD' | 'ILS') {
   worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.combined;
   worksheet.mergeCells(`B${row}:E${row}`);
   for (let column = 2; column <= 6; column += 1) {
@@ -726,7 +727,7 @@ function writeEnglishCombinedRow(worksheet: ExcelJS.Worksheet, row: number, labe
     cell.border = { left: { style: column === 2 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: column === 6 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: ENGLISH_TEMPLATE_STYLE.border, bottom: ENGLISH_TEMPLATE_STYLE.border };
   }
   worksheet.getCell(`F${row}`).value = { formula };
-  worksheet.getCell(`F${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usdAccounting;
+  worksheet.getCell(`F${row}`).numFmt = targetCurrency === 'USD' ? ENGLISH_TEMPLATE_STYLE.numberFormats.usdAccounting : ENGLISH_TEMPLATE_STYLE.numberFormats.ils;
 }
 
 function writeEnglishStaffSection(worksheet: ExcelJS.Worksheet, startRow: number, model: CanonicalExportModel, targetCurrency: 'USD' | 'ILS'): { nextRow: number; totalRow: number; vatRow: number; porterageRow: number; roomsLabelRow: number } {
@@ -743,20 +744,20 @@ function writeEnglishStaffSection(worksheet: ExcelJS.Worksheet, startRow: number
   const entries = model.complimentaryStaff ?? [];
   entries.forEach((charge, index) => writeEnglishStaffDetail(worksheet, firstRow + index, charge, targetCurrency));
   const totalRow = firstRow + entries.length;
-  writeEnglishStaffTotal(worksheet, totalRow, entries.length ? `=IF(COUNTIF(F${firstRow}:F${totalRow - 1},"")>0,"",SUM(F${firstRow}:F${totalRow - 1}))` : '=""');
+  writeEnglishStaffTotal(worksheet, totalRow, entries.length ? `=IF(COUNTIF(F${firstRow}:F${totalRow - 1},"")>0,"",SUM(F${firstRow}:F${totalRow - 1}))` : '=""', targetCurrency);
   const vatRow = totalRow + 2;
   const porterageRow = vatRow + 2;
   writeEnglishUnsupportedStaffRow(worksheet, vatRow, 'vat staff', englishThemeFill(7, 0.5999938962981048), {
     formula: `=IF(OR(NOT(ISNUMBER(C${vatRow})),NOT(ISNUMBER(D${vatRow})),NOT(ISNUMBER(E${vatRow}))),"",C${vatRow}*D${vatRow}*E${vatRow})`,
     unitValue: 1,
-    numberFormat: ENGLISH_TEMPLATE_STYLE.numberFormats.usdAccounting,
+    numberFormat: targetCurrency === 'USD' ? ENGLISH_TEMPLATE_STYLE.numberFormats.usdAccounting : ENGLISH_TEMPLATE_STYLE.numberFormats.ils,
   });
   writeEnglishUnsupportedStaffRow(worksheet, porterageRow, 'Porterage', englishThemeFill(5, 0.7999816888943144), {
     formula: `=IF(OR(NOT(ISNUMBER(C${porterageRow})),NOT(ISNUMBER(D${porterageRow}))),"",C${porterageRow}*D${porterageRow})`,
     labelOnlyFill: true,
   });
   const roomsLabelRow = porterageRow + 2;
-  writeEnglishUnsupportedSummaryRow(worksheet, roomsLabelRow, 'Toal rooms is USD');
+  writeEnglishUnsupportedSummaryRow(worksheet, roomsLabelRow, `Toal rooms is ${targetCurrency}`, targetCurrency);
   return { nextRow: roomsLabelRow + 2, totalRow, vatRow, porterageRow, roomsLabelRow };
 }
 
@@ -770,11 +771,10 @@ function writeEnglishStaffDetail(worksheet: ExcelJS.Worksheet, row: number, char
   const complete = charge.completeness === 'complete' && charge.currency === targetCurrency && charge.amount.kind === 'numeric' && charge.number.kind === 'numeric';
   const amount = charge.amount.kind === 'numeric' ? Number(charge.amount.value) : null;
   const number = charge.number.kind === 'numeric' ? Number(charge.number.value) : 0;
-  styleEnglishDetailRow(worksheet, row, charge.type === 'free' ? 'Free' : 'Staff', number, complete ? amount : null, 1, `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})`);
-  worksheet.getCell(`D${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+  styleEnglishDetailRow(worksheet, row, charge.type === 'free' ? 'Free' : 'Staff', number, complete ? amount : null, 1, `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})`, currencyNumberFormat(targetCurrency));
 }
 
-function writeEnglishStaffTotal(worksheet: ExcelJS.Worksheet, row: number, formula: string) {
+function writeEnglishStaffTotal(worksheet: ExcelJS.Worksheet, row: number, formula: string, targetCurrency: 'USD' | 'ILS') {
   worksheet.getCell(`B${row}`).value = 'Total';
   worksheet.getCell(`F${row}`).value = { formula };
   for (let column = 2; column <= 6; column += 1) {
@@ -785,7 +785,7 @@ function writeEnglishStaffTotal(worksheet: ExcelJS.Worksheet, row: number, formu
     cell.border = { left: { style: column === 2 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: column === 6 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: { style: 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, bottom: ENGLISH_TEMPLATE_STYLE.border };
   }
   worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.subtotal;
-  worksheet.getCell(`F${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usd;
+  worksheet.getCell(`F${row}`).numFmt = currencyNumberFormat(targetCurrency);
 }
 
 function writeEnglishUnsupportedStaffRow(worksheet: ExcelJS.Worksheet, row: number, label: string, fill: ExcelJS.Fill, options: { formula: string; unitValue?: number; numberFormat?: string; labelOnlyFill?: boolean }) {
@@ -808,7 +808,7 @@ function writeEnglishUnsupportedStaffRow(worksheet: ExcelJS.Worksheet, row: numb
   }
 }
 
-function writeEnglishUnsupportedSummaryRow(worksheet: ExcelJS.Worksheet, row: number, label: string) {
+function writeEnglishUnsupportedSummaryRow(worksheet: ExcelJS.Worksheet, row: number, label: string, targetCurrency: 'USD' | 'ILS') {
   worksheet.getRow(row).height = ENGLISH_TEMPLATE_STYLE.rows.staffHeader;
   worksheet.mergeCells(`B${row}:E${row}`);
   worksheet.getCell(`B${row}`).value = label;
@@ -819,7 +819,7 @@ function writeEnglishUnsupportedSummaryRow(worksheet: ExcelJS.Worksheet, row: nu
     cell.alignment = { horizontal: 'center', vertical: 'middle' };
     cell.border = { left: { style: column === 2 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, right: { style: column === 6 ? 'medium' : 'thin', color: ENGLISH_TEMPLATE_STYLE.border.color }, top: ENGLISH_TEMPLATE_STYLE.border, bottom: ENGLISH_TEMPLATE_STYLE.border };
   }
-  worksheet.getCell(`F${row}`).numFmt = ENGLISH_TEMPLATE_STYLE.numberFormats.usdAccounting;
+  worksheet.getCell(`F${row}`).numFmt = targetCurrency === 'USD' ? ENGLISH_TEMPLATE_STYLE.numberFormats.usdAccounting : ENGLISH_TEMPLATE_STYLE.numberFormats.ils;
 }
 
 function writeEnglishAncillarySection(worksheet: ExcelJS.Worksheet, startRow: number, model: CanonicalExportModel, targetCurrency: 'USD' | 'ILS'): { nextRow: number } {

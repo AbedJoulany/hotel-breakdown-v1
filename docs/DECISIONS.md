@@ -173,7 +173,7 @@ No additional proposed decision is being recorded in this file. New recommendati
 
 - **Status:** Approved; implemented
 - **Decision:** The workflow is Workspace → Export Preview → Review/Correct/Validate → Draft or Final Excel Export. Rate edits are session-scoped and do not mutate Pricing Rules or IndexedDB. Preview uses `FinancialCalculator`; Excel builders generate independent guarded formulas tested against shared fixtures.
-- **Final policy:** Draft is allowed with warnings. Final is allowed only when no `final-blocker` issues exist. `Missing Price` and `Pricing Conflict` are final blockers.
+- **Final policy:** Draft and Final are allowed after Folio Comparison is complete, even when validation issues exist. `Missing Price`, `Pricing Conflict`, unresolved occupancy, and duplicate-room conflicts remain classified and displayed as warnings; they do not block either export action. Missing values remain blank rather than being replaced with zero.
 - **Visual fidelity:** Generated workbooks remain scratch-built with ExcelJS, while their fonts, colors, boxed borders, portrait print layout, header metadata, and logo placement follow the inspected Hebrew and USD reference workbooks.
 
 ### DEC-021 - Additional Charges currency, VAT, and export mapping

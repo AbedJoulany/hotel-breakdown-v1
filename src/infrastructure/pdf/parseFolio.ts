@@ -7,6 +7,7 @@ export interface ParsedFolio {
   entries: FolioEntry[];
   currency: SupportedCurrency;
   totals: Record<SupportedCurrency, string | null>;
+  confirmationNumber: string | null;
 }
 
 export function parseFolio(pages: PdfTextPage[]): ParsedFolio {
@@ -15,7 +16,23 @@ export function parseFolio(pages: PdfTextPage[]): ParsedFolio {
     currency,
     entries: pages.flatMap((page) => parsePageEntries(page, currency)),
     totals: findTotals(pages),
+    confirmationNumber: findConfirmationNumber(pages),
   };
+}
+
+function findConfirmationNumber(pages: PdfTextPage[]): string | null {
+  for (const page of pages) {
+    const label = page.items.find((item) => /confirmation\s*(number|no\.?)/iu.test(item.text.trim()));
+    if (!label) continue;
+    const candidates = page.items
+      .filter((item) => Math.abs(item.y - label.y) <= 4 && item.x > label.x)
+      .sort((left, right) => left.x - right.x)
+      .flatMap((item) => item.text.trim().split(/\s+/u))
+      .map((value) => value.replace(/^[#:\-]+|[.,;]+$/gu, ''))
+      .filter((value) => /^[A-Za-z0-9][A-Za-z0-9/_-]*$/u.test(value));
+    if (candidates[0]) return candidates[0];
+  }
+  return null;
 }
 
 function parsePageEntries(page: PdfTextPage, currency: SupportedCurrency): FolioEntry[] {
