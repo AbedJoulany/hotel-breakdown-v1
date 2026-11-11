@@ -175,7 +175,7 @@ The following boundaries are planned but not implemented:
 
 **Implemented:** `ExportDataBuilder` produces an immutable canonical model with grouped rows, temporary `groupedRowId`, lightweight source references, typed rates, issue severity, separate data/financial completeness, and no authoritative derived monetary totals. `Export Preview` applies session-scoped rate overrides and both preview and Excel export use the same effective model and `FinancialCalculator` rules.
 
-**Unresolved:** The templates' fixed single/double/staff/free categories do not map directly to the application's room-type and occupancy records. Manual fields such as `PM`, `Agent`, `Free`, `vat staff`, and `paid for transaction` require explicit approval before further export implementation.
+**Unresolved:** The templates' fixed single/double/staff/free categories do not map directly to the application's room-type and occupancy records. Broader manual fields such as `Agent`, `vat staff`, and `paid for transaction` require separate approval; the approved PM metadata mapping is implemented.
 
 These modules must consume domain/application contracts rather than place business rules in React components.
 

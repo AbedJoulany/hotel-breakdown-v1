@@ -67,7 +67,9 @@ Daily hotel reports contain room, guest, group, occupancy, room-type, and rate i
 - Folio PDF parsing for the inspected layouts, separate ILS/USD totals, and room/guest comparison across report dates.
 - Group-night aggregation for the same room and guest, with Folio amount warnings using the approved `0.01` tolerance.
 - Folio warning acknowledgment state persisted with the Folio file hash and timestamp.
-- Pure Final Export validation gate combining financial blockers and unacknowledged Folio warnings; no export action is connected yet.
+- Pure Final Export validation gate combining financial blockers and unacknowledged Folio warnings.
+- Excel Export Preview with Draft and Final workbook downloads after Folio Comparison is complete; validation warnings remain visible and non-blocking.
+- Excel Export metadata fields for hotel name, group-name override, display-date override, and PM. Folio `Confirmation No.` can populate PM without changing source report facts.
 
 ### Explicit exclusions for the current implementation slice
 
@@ -75,7 +77,7 @@ Daily hotel reports contain room, guest, group, occupancy, room-type, and rate i
 - Automatic Complimentary discount formula.
 - Automatic currency conversion or exchange-rate assumptions.
 - Automatic financial correction of conflicting records.
-- Excel export before the real templates are inspected.
+- Automatic backup export/import and original PDF binary persistence.
 
 ## User workflow
 
@@ -95,12 +97,12 @@ Daily hotel reports contain room, guest, group, occupancy, room-type, and rate i
 
 ### Folio, Contract, Preview, Export
 
-Contract, Preview, and Export remain Approved / Planned and are not implemented in the current code. Folio comparison is partially implemented for the inspected layouts:
+Contract pricing is partially implemented through `Pricing Rules`. Preview, Folio Comparison, and Excel Export are implemented for the inspected layouts:
 
 1. User optionally adds a Folio for comparison only. **Implemented for inspected Folio layouts.**
 2. User enters contract pricing. **Partially implemented through Pricing Rules.**
 3. User reviews calculated results, warnings, and unresolved issues. **Partially implemented.**
-4. User exports a Draft or Final workbook when validation allows it. **Planned.**
+4. User edits optional export metadata, reviews warnings, and downloads a Draft or Final workbook after Folio Comparison is complete. **Implemented.**
 
 ## Inputs and outputs
 
@@ -127,10 +129,8 @@ Contract, Preview, and Export remain Approved / Planned and are not implemented 
 
 ### Planned output
 
-- Contract charges and separate financial lines.
-- Currency-specific totals.
-- Draft/Final Excel workbook.
 - Complete project backup.
+- Original PDF binary recovery.
 
 ## Approved business rules
 
@@ -195,11 +195,11 @@ Contract, Preview, and Export remain Approved / Planned and are not implemented 
 
 ### Final export warning policy
 
-**Approved for later implementation; not implemented:** Validation continues to detect unresolved financially material conflicts, missing required prices, and other issues, but these warnings must not block Draft or Final downloads. Missing values remain missing and must not become zero. Final Export must download immediately without a confirmation dialog or an additional `Export Anyway` action.
+**Implemented:** Validation continues to detect unresolved financially material conflicts, missing required prices, and other issues, but these warnings do not block Draft or Final downloads after Folio Comparison is complete. Missing values remain missing and are not replaced with zero. Final Export downloads immediately without a confirmation dialog or an additional `Export Anyway` action.
 
 ### Draft export
 
-Draft export may be available for incomplete projects when a meaningful workbook can be produced. It must be labelled `DRAFT` and must show missing or unresolved information honestly. This behavior is approved for later implementation and is not currently implemented.
+Draft export is available when a meaningful workbook can be produced. It is labelled `DRAFT` and shows missing or unresolved information honestly.
 
 ## Acceptance criteria
 
@@ -222,7 +222,7 @@ Draft export may be available for incomplete projects when a meaningful workbook
 - Contract pricing and financial calculations are deterministic and tested.
 - Currency totals remain separate.
 - Folio comparison is optional and currency-safe.
-- Final export cannot bypass blocking validation issues.
+- Final export remains available after Folio Comparison even when validation warnings exist; warnings are displayed and missing values remain blank.
 - Draft and Final exports follow the approved English/Hebrew template behavior.
 - Complete backup import always creates a new independent project.
 
@@ -231,13 +231,13 @@ Draft export may be available for incomplete projects when a meaningful workbook
 - PDF extraction depends on the observed Oracle Reports layouts; additional layouts may require new parsing rules.
 - Financial correctness depends on resolving pricing precedence, Folio tolerance, and Complimentary formula decisions.
 - Browser persistence depends on quota and binary-PDF storage behavior.
-- Excel export depends on inspecting the supplied templates.
+- Generated Excel workbooks use the inspected templates as visual/business references and are built independently.
 
 ## Unresolved requirements
 
 - Pricing-rule precedence for overlapping date and occupancy rules.
-- Final Export acknowledgment UI and export action.
+- Approval-state behavior beyond the current Folio warning acknowledgment.
 - Automatic Complimentary discount formula.
 - Storage quota, failure recovery, and backup format.
 - Exact UI workflow for correcting duplicate-room conflicts.
-- Excel template worksheet and cell mapping.
+- Broader template-specific manual-field mapping beyond the implemented metadata and generated sections.
