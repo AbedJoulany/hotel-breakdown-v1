@@ -41,5 +41,5 @@ export function validateExport(model: CanonicalExportModel, language: ExportLang
     }]),
   ];
   const finalBlockers = issues.filter((issue) => issue.severity === 'final-blocker');
-  return { canDraft: folioComparisonComplete, canFinal: folioComparisonComplete && finalBlockers.length === 0, issues, finalBlockers };
+  return { canDraft: folioComparisonComplete, canFinal: folioComparisonComplete, issues, finalBlockers };
 }

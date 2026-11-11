@@ -1,6 +1,6 @@
 # Hotel Breakdown V1 - Implementation Status
 
-Last reviewed: 2026-11-10
+Last reviewed: 2026-11-11
 
 ## Status legend
 
@@ -22,6 +22,7 @@ Last reviewed: 2026-11-10
 - Local PDF file selection from the browser.
 - In-memory project state for the current workspace.
 - Multiple Group Report selection and sequential processing.
+- Excel Export metadata fields for hotel name, export group-name override, export date override, and PM. PM is populated from the inspected Folio `Confirmation No.` when the PM field is empty; source report dates and group names remain unchanged for calculations and comparison.
 
 ### PDF report analysis
 
@@ -50,11 +51,12 @@ Last reviewed: 2026-11-10
 - Invalid reports do not replace an active valid report.
 - Active reports are sorted by embedded report date.
 - Report coverage and missing dates can be calculated for a selected date range.
+- Workspace date-range fields use one native `date` control that supports calendar selection and keyboard entry using the browser's date format. Changing the range filters the visible Group Report groups to the selected date range while preserving all reports in project state.
 - Basic room-night totals are calculated for a selected group.
 - Pure pricing-rule contracts and matching results are implemented for one complete `Date + Room Type + Occupancy Band` rule, plus `Pricing Conflict` and `Missing Price`.
 - `Pricing Rules` UI supports manual entry of the single rule shape and displays `Matched`, `Missing Price`, and `Pricing Conflict` statuses.
 - Basic workspace financial summaries remain available; Export Preview uses the shared `FinancialCalculator` for grouped rows, session rate overrides, currencies, precision, and Hebrew VAT.
-- Financial validation reports unresolved room conflicts, pricing conflicts, and missing or invalid prices as blockers through a pure domain contract; no Final export exists yet.
+- Financial validation reports unresolved room conflicts, pricing conflicts, missing or invalid prices, and unsupported or missing occupancy as distinct review issues through a pure domain contract. These issues remain visible for review while Export Preview keeps Draft and Final downloads available after Folio Comparison.
 - Numeric `reportedRate` observations from the selected group are shown as non-binding price suggestions; the user must choose the currency and add them manually. Active pricing rules are persisted in the local workspace snapshot.
 - Group matching uses a safe comparison key that trims and collapses whitespace and ignores letter case while preserving the original display name.
 
@@ -84,8 +86,8 @@ Last reviewed: 2026-11-10
 - Folio amount differences are displayed as review warnings and are not connected to the blocking `Financial Validation` gate.
 - Folio amount comparison uses the approved `0.01` minor-unit tolerance for ILS and USD.
 - The UI records an acknowledgment timestamp and Folio file hash when Folio warnings are reviewed; Export Preview independently applies the issue severity policy for Draft and Final workbook downloads.
-- A pure `Final Export` validation contract remains available for legacy Folio workflow checks; Export Preview uses structured issues and blocks only `final-blocker` issues.
-- Export Preview displays all issues and prevents Final only for `final-blocker` issues; Draft remains available for review.
+- A pure `Final Export` validation contract remains available for legacy Folio workflow checks; Export Preview uses structured issues and keeps their severity for review.
+- Export Preview displays all issues; Draft and Final remain available after Folio Comparison is complete, including when `final-blocker` issues are present.
 - `Folio nights` is shown as `Not stated` for the inspected layouts because they do not provide a per-room night quantity; account-level Arrival/Departure is not applied to individual rooms.
 - Multiple-upload results summarize added, replaced, and duplicate files.
 - Failed files do not prevent other selected files from being processed.
@@ -93,6 +95,7 @@ Last reviewed: 2026-11-10
 - Failed files expose a retry action that reprocesses only that file.
 - IndexedDB stores the current project, active report metadata, parsed analyses, active corrections, and correction history locally.
 - `Continue Project` restores the saved workspace state from the same device.
+- Editable project metadata is included in the persisted `Project` snapshot and is passed to Export Preview; Hebrew Excel writes PM to the `הזמנה` field.
 
 ### Excel export and preview
 
@@ -103,10 +106,11 @@ Last reviewed: 2026-11-10
 - Canonical rows use temporary grouped IDs, lightweight source references, typed rates, issue severity, and separate data/financial completeness.
 - `FinancialCalculator` supports positive, zero, negative, missing, and textual rates, separate currencies, Hebrew room VAT, and blank dependent totals for incomplete nights.
 - `Export Preview` displays date-grouped rows, editable session-only rates, statuses, warnings, nightly totals, and overall totals without exposing room numbers.
-- Draft export is available with warnings; Final export is disabled when `final-blocker` issues exist.
-- Hebrew and USD workbooks are generated from scratch with one worksheet, independent date sections, formulas, print settings, direction, and the embedded Orient logo asset.
-- Hebrew and USD workbook presentation now follows the inspected reference visual language: language-specific fonts, portrait print layout, reference-like colors, boxed borders, enlarged logo placement, hotel metadata, and no internal preview-check text.
+- Draft and Final export are available with warnings after Folio Comparison is complete; `final-blocker` severity remains visible for review but does not disable either action.
+- Hebrew and English workbooks are generated from scratch with one worksheet, independent date sections, formulas, print settings, direction, and the embedded Orient logo asset. English supports both USD and ILS target-currency choices.
+- Hebrew and English workbook presentation now follows the inspected reference visual language: language-specific fonts, portrait print layout, reference-like colors, boxed borders, enlarged logo placement, hotel metadata, and no internal preview-check text.
 - Excel export does not copy or populate the supplied reference templates.
+- Native spreadsheet visual review of the generated Hebrew/ILS, English/USD, and English/ILS workbooks was completed and confirmed by the user.
 
 ## Verification
 
@@ -120,7 +124,7 @@ npm run build
 Observed result:
 
 - 25 test files passed.
-- 103 tests passed.
+- 116 tests passed.
 - Production build passed.
 
 - PDF.js may emit `standardFontDataUrl` warnings during tests; these did not fail the test run.
@@ -130,7 +134,6 @@ Observed result:
 The following V1 capabilities are agreed requirements but are not implemented yet:
 
 - Original PDF binary persistence, backup export/import, and storage recovery behavior.
-- Persistence of original PDF binaries, backup export/import, and storage recovery behavior.
 - Independent project report snapshots and saved report collections.
 - Final correction validation and blocking completion while material conflicts remain unresolved.
 - Ambiguous group-name collision detection and user-assisted resolution.
@@ -156,4 +159,4 @@ These items are recommendations, not completed functionality.
 
 ## Next proposed task
 
-Review generated workbook layout in a native spreadsheet application; the V1 Final blockers for unresolved Duplicate Room Conflict and Unresolved Occupancy are implemented.
+Preserve original PDF binaries in the local project snapshot before designing backup export/import.

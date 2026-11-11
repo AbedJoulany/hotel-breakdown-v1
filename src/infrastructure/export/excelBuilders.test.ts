@@ -68,6 +68,15 @@ function jpegDimensions(bytes: Uint8Array): { width: number; height: number } {
 }
 
 describe('Excel builders', () => {
+  it('writes PM to the Hebrew הזמנה field', async () => {
+    const workbook = await buildHebrewWorkbook({
+      ...model([night('2026-10-24', 1)]),
+      metadata: { ...model([night('2026-10-24', 1)]).metadata, pm: '161240141' },
+    });
+
+    expect(workbook.worksheets[0].getCell('C13').value).toBe('161240141');
+  });
+
   it('renders one Hebrew section with the original three-row layout', async () => {
     const sheet = (await buildHebrewWorkbook(model([night('2026-10-24', 3)]))).worksheets[0];
 
@@ -293,6 +302,8 @@ describe('Excel builders', () => {
     expect(sheet.name).toBe('גיליון1');
     expect(sheet.getCell('D16').value).toBe(100);
     expect(sheet.getCell('F16').value).toMatchObject({ formula: expect.stringContaining('ISNUMBER(D16)') });
+    expect(sheet.getCell('D16').numFmt).toContain('₪');
+    expect(sheet.getCell('F16').numFmt).toContain('₪');
     expect(sheet.views[0].rightToLeft).toBe(true);
     expect(sheet.getImages()).toHaveLength(1);
   });
@@ -315,6 +326,16 @@ describe('Excel builders', () => {
     expect(sheet.getCell('B10').value).toBe('2026-10-24');
     expect(sheet.getCell('D16').value).toBe(100);
     expect(sheet.getCell('D16').numFmt).toContain('$');
+  });
+
+  it('writes PM and the display-date override to the English header', async () => {
+    const sheet = (await buildUsdWorkbook({
+      ...usdModel,
+      metadata: { ...usdModel.metadata, pm: '161240141', displayReportDate: '2026-10-25' },
+    })).worksheets[0];
+
+    expect(sheet.getCell('B10').value).toBe('2026-10-25');
+    expect(sheet.getCell('B11').value).toBe('161240141');
   });
 
   it('matches the English template geometry and preserves dynamic USD references', async () => {

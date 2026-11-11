@@ -1,4 +1,4 @@
-import type { ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { exportTargetCurrency, type CanonicalExportModel, type CanonicalAdditionalChargeRow, type CanonicalComplimentaryStaffRow, type CanonicalRoomChargeRow } from '../domain/export/models';
 import { validateExport } from '../domain/export/exportValidation';
 import { calculateFinancialPreview } from '../domain/pricing/financialCalculator';
@@ -15,6 +15,7 @@ interface ExportPreviewProps {
 }
 
 export default function ExportPreview({ model, language, rateOverrides, onRateChange, onExport, folioComparisonComplete }: ExportPreviewProps) {
+  const [issuesExpanded, setIssuesExpanded] = useState(true);
   if (!model) {
     return <p className="muted">Select a group and upload reports before opening Export Preview.</p>;
   }
@@ -23,8 +24,10 @@ export default function ExportPreview({ model, language, rateOverrides, onRateCh
   const financial = calculateFinancialPreview(model, language);
   const targetCurrency = exportTargetCurrency(language);
   const totals = financial.totals[targetCurrency];
+  const roomNightCount = model.nights.reduce((total, night) => total + night.roomCharges.reduce((nightTotal, row) => nightTotal + row.roomCount * row.nights, 0), 0);
+  const warningCount = validation.issues.length;
   return (
-    <section className="export-preview" aria-labelledby="export-preview-title">
+    <section className="export-preview export-preview-template" aria-labelledby="export-preview-title">
       <div className="export-preview-heading">
         <div>
           <p className="eyebrow">Review before download</p>
@@ -32,24 +35,75 @@ export default function ExportPreview({ model, language, rateOverrides, onRateCh
           <p className="muted">Group: {model.metadata.groupName}</p>
         </div>
         <div className="export-actions">
+          <span className={`export-folio-status${folioComparisonComplete ? ' complete' : ' required'}`}>
+            Folio: {folioComparisonComplete ? 'Complete' : 'Required'}
+          </span>
           <button className="secondary-button" type="button" disabled={!validation.canDraft} onClick={() => onExport(false)}>Draft Export</button>
           <button className="primary-button" type="button" disabled={!validation.canFinal} onClick={() => onExport(true)}>Final Export</button>
+        </div>
+      </div>
+      <div className="template-document-header" role="region" aria-label="Template preview header">
+          <div>
+            <span className="eyebrow">Hotel Breakdown</span>
+            <strong>{model.metadata.groupName}</strong>
+          </div>
+          <div>
+            <span>Currency</span>
+            <strong>{targetCurrency}</strong>
+          </div>
+          <div>
+            <span>Report dates</span>
+            <strong>{model.nights.map((night) => night.reportDate).join(' · ') || '—'}</strong>
+          </div>
+      </div>
+      <div className="export-summary-grid" aria-label="Export summary">
+        <div className="export-summary-card">
+          <span>Overall total</span>
+          <strong>{totals ?? '—'} {targetCurrency}</strong>
+        </div>
+        <div className="export-summary-card">
+          <span>Room-Nights</span>
+          <strong>{roomNightCount}</strong>
+        </div>
+        <div className="export-summary-card">
+          <span>Report dates</span>
+          <strong>{model.nights.length}</strong>
+        </div>
+        <div className={`export-summary-card${warningCount > 0 ? ' has-warnings' : ' is-clear'}`}>
+          <span>Validation warnings</span>
+          <strong>{warningCount}</strong>
         </div>
       </div>
       <div className={`export-validation ${validation.canFinal ? 'ready' : 'blocked'}`} role="status">
         {!folioComparisonComplete
           ? 'Complete Folio Comparison before exporting.'
-          : validation.canFinal
-            ? 'Ready for Final Export.'
-            : `${validation.finalBlockers.length} issue(s) must be resolved before Final Export.`}
+          : validation.issues.length > 0
+            ? 'Warnings found. Draft and Final Export remain available.'
+            : 'Ready for Final Export.'}
       </div>
-      {validation.issues.length > 0 && (
-        <ul className="export-issues" aria-label="Export issues">
-          {validation.issues.map((issue, index) => <li key={`${issue.code}-${index}`}><strong>{issue.code}</strong> · {issue.message}</li>)}
-        </ul>
+      {warningCount > 0 && (
+        <section className="export-issues-panel" aria-labelledby="export-issues-title">
+          <div className="export-issues-header">
+            <strong id="export-issues-title">Validation warnings ({warningCount})</strong>
+            <button
+              className="text-button"
+              type="button"
+              aria-expanded={issuesExpanded}
+              aria-controls="export-issues-list"
+              onClick={() => setIssuesExpanded((current) => !current)}
+            >
+              {issuesExpanded ? 'Collapse' : 'Expand'}
+            </button>
+          </div>
+          {issuesExpanded && (
+            <ul className="export-issues" id="export-issues-list" aria-label="Export issues">
+              {validation.issues.map((issue, index) => <li key={`${issue.code}-${index}`}><strong>{issue.code}</strong> · {issue.message}</li>)}
+            </ul>
+          )}
+        </section>
       )}
       <div className="export-total-card">
-        <span>{language === 'hebrew' ? 'סה״כ כולל מע״מ' : 'Overall total'}</span>
+        <span>{language === 'hebrew' ? 'סה״כ כולל מע״מ' : 'Selected template total'}</span>
         <strong>{totals ?? '—'} {targetCurrency}</strong>
       </div>
       {model.nights.map((night) => (

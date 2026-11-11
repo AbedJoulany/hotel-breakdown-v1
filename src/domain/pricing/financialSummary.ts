@@ -34,12 +34,18 @@ export interface FinancialRoomConflict {
   roomNumber: string;
 }
 
+export interface FinancialUnresolvedOccupancy {
+  reportDate: IsoDate;
+  roomNumber: string;
+}
+
 export interface FinancialSummary {
   charges: FinancialCharge[];
   totals: Record<SupportedCurrency, string>;
   missingPrices: FinancialMissingPrice[];
   pricingConflicts: FinancialPricingConflict[];
   roomConflicts: FinancialRoomConflict[];
+  unresolvedOccupancies: FinancialUnresolvedOccupancy[];
 }
 
 export function calculateFinancialSummary(
@@ -52,6 +58,7 @@ export function calculateFinancialSummary(
     missingPrices: [],
     pricingConflicts: [],
     roomConflicts: [],
+    unresolvedOccupancies: [],
   };
 
   for (const day of days) {
@@ -69,6 +76,10 @@ export function calculateFinancialSummary(
       }
 
       const room = records[0];
+      if (!isSupportedOccupancy(room.adults, room.children)) {
+        summary.unresolvedOccupancies.push({ reportDate: day.reportDate, roomNumber });
+        continue;
+      }
       const roomType = room.bookedRoomType ?? room.actualRoomType ?? '';
       const result = matchPricingRule({
         reportDate: day.reportDate,
@@ -110,6 +121,15 @@ export function calculateFinancialSummary(
       USD: formatMinorUnits(totals.USD),
     },
   };
+}
+
+function isSupportedOccupancy(adults: number | null, children: number | null): boolean {
+  return (adults === 1 && children === 0)
+    || (adults === 2 && children === 0)
+    || (adults === 3 && children === 0)
+    || (adults === 1 && children === 1)
+    || (adults === 2 && children === 1)
+    || (adults === 2 && children === 2);
 }
 
 function parseRateToMinorUnits(rate: string): bigint | null {

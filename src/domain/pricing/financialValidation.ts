@@ -1,6 +1,6 @@
 import type { FinancialSummary } from './financialSummary';
 
-export type FinancialValidationIssueKind = 'room-conflict' | 'pricing-conflict' | 'missing-price';
+export type FinancialValidationIssueKind = 'room-conflict' | 'pricing-conflict' | 'missing-price' | 'unresolved-occupancy';
 
 export interface FinancialValidationIssue {
   kind: FinancialValidationIssueKind;
@@ -23,6 +23,9 @@ export function validateFinancialSummary(summary: FinancialSummary): FinancialVa
   }
   if (summary.missingPrices.length > 0) {
     issues.push({ kind: 'missing-price', count: summary.missingPrices.length });
+  }
+  if (summary.unresolvedOccupancies.length > 0) {
+    issues.push({ kind: 'unresolved-occupancy', count: summary.unresolvedOccupancies.length });
   }
 
   return {

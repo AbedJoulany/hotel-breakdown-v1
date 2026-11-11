@@ -14,6 +14,10 @@ export function createProject(input: CreateProjectInput): Project {
     updatedAt: input.now,
     reportIds: [],
     selectedGroupName: null,
+    hotelName: '',
+    pm: '',
+    groupNameOverride: '',
+    reportDateOverride: null,
     dateRange: {
       start: null,
       end: null,

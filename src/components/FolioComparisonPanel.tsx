@@ -10,6 +10,7 @@ interface FolioComparisonPanelProps {
   groupRooms: GroupRoomForFolioComparison[];
   warningAcknowledgement: FolioWarningAcknowledgement | null;
   onFolioLoaded: (fileHash: string | null) => void;
+  onConfirmationNumberDetected: (confirmationNumber: string | null) => void;
   onWarningAcknowledged: () => void;
 }
 
@@ -17,6 +18,7 @@ function FolioComparisonPanel({
   groupRooms,
   warningAcknowledgement,
   onFolioLoaded,
+  onConfirmationNumberDetected,
   onWarningAcknowledged,
 }: FolioComparisonPanelProps) {
   const [fileName, setFileName] = useState<string | null>(null);
@@ -34,15 +36,18 @@ function FolioComparisonPanel({
       const data = await file.arrayBuffer();
       const pages = await extractPdfTextPages(data);
       const nextFileHash = await hashArrayBuffer(data);
-      setFolio(parseFolio(pages));
+      const parsedFolio = parseFolio(pages);
+      setFolio(parsedFolio);
       setFileName(file.name);
       setFileHash(nextFileHash);
       onFolioLoaded(nextFileHash);
+      onConfirmationNumberDetected(parsedFolio.confirmationNumber);
     } catch {
       setFolio(null);
       setFileName(null);
       setFileHash(null);
       onFolioLoaded(null);
+      onConfirmationNumberDetected(null);
       setError('Could not analyze this Folio PDF.');
     }
   }
@@ -59,11 +64,13 @@ function FolioComparisonPanel({
           <p className="eyebrow">Optional comparison</p>
           <h3 id="folio-panel-title">Folio Comparison</h3>
         </div>
-        {fileName && <span className="file-name">Selected: {fileName}</span>}
+        {fileName && <span className="file-name" aria-live="polite">Selected: {fileName}</span>}
       </div>
       <label className="upload-box folio-upload-box">
-        <span>Folio PDF</span>
+        <span className="upload-box-title">Upload Folio PDF</span>
+        <span className="upload-box-hint">Choose one Folio PDF to compare with the selected group.</span>
         <input
+          aria-label="Folio PDF"
           type="file"
           accept="application/pdf,.pdf"
           onChange={(event) => void handleUpload(event.target.files?.[0])}

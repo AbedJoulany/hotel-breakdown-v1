@@ -40,6 +40,22 @@ interface UploadItem {
   error?: string;
 }
 
+type DateRangeField = 'start' | 'end';
+
+function parseDateInput(value: string): Project['dateRange']['start'] | null {
+  const normalized = value.trim().replace(/[/.]/g, '-');
+  const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/u.exec(normalized);
+  const europeanMatch = /^(\d{1,2})-(\d{1,2})-(\d{2}|\d{4})$/u.exec(normalized);
+  const year = isoMatch ? Number(isoMatch[1]) : europeanMatch ? Number(europeanMatch[3]) : null;
+  const month = isoMatch ? Number(isoMatch[2]) : europeanMatch ? Number(europeanMatch[2]) : null;
+  const day = isoMatch ? Number(isoMatch[3]) : europeanMatch ? Number(europeanMatch[1]) : null;
+  if (year === null || month === null || day === null) return null;
+  const fullYear = year < 100 ? 2000 + year : year;
+  const candidate = new Date(Date.UTC(fullYear, month - 1, day));
+  if (candidate.getUTCFullYear() !== fullYear || candidate.getUTCMonth() !== month - 1 || candidate.getUTCDate() !== day) return null;
+  return `${fullYear.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}` as Project['dateRange']['start'];
+}
+
 function App() {
   const [view, setView] = useState<View>('home');
   const [analysis, setAnalysis] = useState<AnalyzedGroupReport | null>(null);
@@ -51,15 +67,23 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [reportMessage, setReportMessage] = useState<string | null>(null);
   const [dateRangeEdited, setDateRangeEdited] = useState(false);
+  const [dateInputValues, setDateInputValues] = useState({ start: '', end: '' });
+  const [roomNightSummaryExpanded, setRoomNightSummaryExpanded] = useState(true);
   const [corrections, setCorrections] = useState<RoomCorrection[]>([]);
   const [correctionHistory, setCorrectionHistory] = useState<RoomCorrection[]>([]);
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
   const [additionalCharges, setAdditionalCharges] = useState<AdditionalChargeRow[]>([createAdditionalChargeRow('additional-charge-1')]);
   const [complimentaryStaff, setComplimentaryStaff] = useState<ComplimentaryStaffRow[]>([createComplimentaryStaffRow('complimentary-staff-1')]);
-  const [exportLanguage, setExportLanguage] = useState<ExportLanguage>('usd');
+  const [exportLanguage, setExportLanguage] = useState<ExportLanguage>('hebrew');
   const [rateOverrides, setRateOverrides] = useState<Map<string, string>>(new Map());
   const [folioWarningAcknowledgement, setFolioWarningAcknowledgement] = useState<FolioWarningAcknowledgement | null>(null);
   const [folioComparisonComplete, setFolioComparisonComplete] = useState(false);
+  useEffect(() => {
+    setDateInputValues({
+      start: project?.dateRange.start ?? '',
+      end: project?.dateRange.end ?? '',
+    });
+  }, [project?.dateRange.start, project?.dateRange.end]);
   const coverage = summarizeReportCoverage(reports);
   const selectedRangeInvalid = Boolean(
     project?.dateRange.start && project.dateRange.end && project.dateRange.start > project.dateRange.end,
@@ -71,6 +95,12 @@ function App() {
       project.dateRange.end,
     )
     : [];
+  const visibleAnalyses = analyses.filter((report) => {
+    if (selectedRangeInvalid) return true;
+    const start = project?.dateRange.start;
+    const end = project?.dateRange.end;
+    return (!start || report.reportDate >= start) && (!end || report.reportDate <= end);
+  });
   const correctedReports = reports.map((report) => ({
     ...report,
     groupSnapshots: report.groupSnapshots.map((group) => ({
@@ -99,9 +129,23 @@ function App() {
     ? calculateFinancialSummary(selectedPricingDays, pricingRules)
     : null;
   const financialValidation = financialSummary ? validateFinancialSummary(financialSummary) : null;
+  const invalidDateInputs = (['start', 'end'] as const).filter((field) => dateInputValues[field].trim() !== '' && !parseDateInput(dateInputValues[field]));
   const baseExportModel = useMemo(() => project?.selectedGroupName
-    ? buildExportData({ reports, selectedGroupName: project.selectedGroupName, corrections, pricingRules, additionalCharges, complimentaryStaff })
-    : null, [reports, project?.selectedGroupName, corrections, pricingRules, additionalCharges, complimentaryStaff]);
+    ? buildExportData({
+      reports,
+      selectedGroupName: project.selectedGroupName,
+      corrections,
+      pricingRules,
+      additionalCharges,
+      complimentaryStaff,
+      exportMetadata: {
+        hotelName: project.hotelName,
+        pm: project.pm,
+        groupName: project.groupNameOverride,
+        reportDate: project.reportDateOverride,
+      },
+    })
+    : null, [reports, project?.selectedGroupName, project?.hotelName, project?.pm, project?.groupNameOverride, project?.reportDateOverride, corrections, pricingRules, additionalCharges, complimentaryStaff]);
   const exportModel = useMemo(() => baseExportModel ? applyRateOverrides(baseExportModel, rateOverrides) : null, [baseExportModel, rateOverrides]);
   const selectedFolioGroupRooms: GroupRoomForFolioComparison[] = project?.selectedGroupName
     ? analyses.flatMap((report) => report.groups
@@ -188,9 +232,7 @@ function App() {
     if (!exportModel) return;
     const validation = validateExport(exportModel, exportLanguage, folioComparisonComplete);
     if ((final && !validation.canFinal) || (!final && !validation.canDraft)) {
-      setError(!folioComparisonComplete
-        ? 'Complete Folio Comparison before exporting.'
-        : `Final Export is blocked by ${validation.finalBlockers.length} unresolved issue(s).`);
+      setError('Complete Folio Comparison before exporting.');
       return;
     }
     const workbook = exportLanguage === 'hebrew'
@@ -300,6 +342,8 @@ function App() {
     setError(null);
     setReportMessage(null);
     setDateRangeEdited(false);
+    setDateInputValues({ start: '', end: '' });
+    setExportLanguage('hebrew');
     setCorrections([]);
     setCorrectionHistory([]);
     setPricingRules([]);
@@ -313,6 +357,18 @@ function App() {
       now,
     }));
     setView('workspace');
+  }
+
+  function handleDateInput(field: DateRangeField, value: string) {
+    setDateInputValues((current) => ({ ...current, [field]: value }));
+    setDateRangeEdited(true);
+    const parsed = value.trim() === '' ? null : parseDateInput(value);
+    if (value.trim() !== '' && parsed === null) return;
+    setProject((current) => current ? {
+      ...current,
+      dateRange: { ...current.dateRange, [field]: parsed },
+      updatedAt: new Date().toISOString(),
+    } : current);
   }
 
   async function handleContinueProject() {
@@ -349,6 +405,15 @@ function App() {
     setProject((current) => current ? {
       ...current,
       selectedGroupName: groupName,
+      groupNameOverride: groupName,
+      updatedAt: new Date().toISOString(),
+    } : current);
+  }
+
+  function updateProjectMetadata(field: 'hotelName' | 'pm' | 'groupNameOverride' | 'reportDateOverride', value: string) {
+    setProject((current) => current ? {
+      ...current,
+      [field]: field === 'reportDateOverride' ? (value ? parseDateInput(value) : null) : value,
       updatedAt: new Date().toISOString(),
     } : current);
   }
@@ -430,16 +495,18 @@ function App() {
             <h1 id="workspace-title">Project workspace</h1>
             {project && <p className="project-name">Project: {project.name}</p>}
             <p className="muted">Upload a daily group report to inspect its detected groups.</p>
-          <label className="upload-box">
-            <span>Group report PDF</span>
+          <label className="upload-box group-report-upload-box">
+            <span className="upload-box-title">Upload Group Reports</span>
+            <span className="upload-box-hint">Select one or more daily PDF reports. Reports are processed locally.</span>
             <input
+              aria-label="Group report PDF"
               type="file"
               accept="application/pdf,.pdf"
               multiple
               onChange={(event) => void handleReportUpload(event.target.files)}
             />
           </label>
-          {fileName && <p className="file-name">Selected: {fileName}</p>}
+          {fileName && <p className="file-name" aria-live="polite">Selected files: {fileName}</p>}
           {uploadItems.length > 0 && (
             <section className="upload-status" aria-labelledby="upload-status-title">
               <h2 id="upload-status-title">File processing</h2>
@@ -488,33 +555,22 @@ function App() {
                     Start date
                     <input
                       type="date"
-                      value={project.dateRange.start ?? ''}
-                      onChange={(event) => {
-                        setDateRangeEdited(true);
-                        setProject((current) => current ? {
-                          ...current,
-                          dateRange: { ...current.dateRange, start: event.target.value as Project['dateRange']['start'] },
-                          updatedAt: new Date().toISOString(),
-                        } : current);
-                      }}
+                      value={dateInputValues.start}
+                      onChange={(event) => handleDateInput('start', event.target.value)}
                     />
                   </label>
                   <label>
                     End date
                     <input
                       type="date"
-                      value={project.dateRange.end ?? ''}
-                      onChange={(event) => {
-                        setDateRangeEdited(true);
-                        setProject((current) => current ? {
-                          ...current,
-                          dateRange: { ...current.dateRange, end: event.target.value as Project['dateRange']['end'] },
-                          updatedAt: new Date().toISOString(),
-                        } : current);
-                      }}
+                      value={dateInputValues.end}
+                      onChange={(event) => handleDateInput('end', event.target.value)}
                     />
                   </label>
                 </div>
+              )}
+              {invalidDateInputs.length > 0 && (
+                <p className="warning-text" role="alert">Enter a valid date as YYYY-MM-DD or DD.MM.YYYY.</p>
               )}
               {selectedRangeInvalid && (
                 <p className="warning-text" role="alert">Start date must not be after end date.</p>
@@ -524,7 +580,7 @@ function App() {
                   Missing report date(s) in selected range: {selectedRangeMissingDates.join(', ')}
                 </p>
               )}
-              {analyses.map((report) => (
+              {visibleAnalyses.map((report) => (
                 <section className="report-groups" key={report.reportDate} aria-labelledby={`report-groups-${report.reportDate}`}>
                   <h3 id={`report-groups-${report.reportDate}`}>Groups for {report.reportDate}</h3>
                   <div className="group-list">
@@ -559,7 +615,19 @@ function App() {
               />
               {roomNightSummary && (
                 <section className="room-night-summary" aria-labelledby="room-night-title">
-                  <h3 id="room-night-title">Room-Nights: {roomNightSummary.totalRoomNights}</h3>
+                  <div className="room-night-summary-header">
+                    <h3 id="room-night-title">Room-Nights: {roomNightSummary.totalRoomNights}</h3>
+                    <button
+                      className="text-button"
+                      type="button"
+                      aria-expanded={roomNightSummaryExpanded}
+                      aria-controls="room-night-summary-details"
+                      onClick={() => setRoomNightSummaryExpanded((current) => !current)}
+                    >
+                      {roomNightSummaryExpanded ? 'Collapse' : 'Expand'}
+                    </button>
+                  </div>
+                  {roomNightSummaryExpanded && <div id="room-night-summary-details">
                   <div className="daily-room-nights">
                     {roomNightSummary.days.map((day) => (
                       <span key={day.reportDate}>
@@ -651,6 +719,7 @@ function App() {
                         ))}
                       </div>
                     ))) }
+                  </div>}
                 </section>
               )}
               {financialSummary && (
@@ -672,6 +741,7 @@ function App() {
                             {issue.kind === 'room-conflict' && `${issue.count} unresolved room conflict(s)`}
                             {issue.kind === 'pricing-conflict' && `${issue.count} pricing conflict(s)`}
                             {issue.kind === 'missing-price' && `${issue.count} missing or invalid price(s)`}
+                            {issue.kind === 'unresolved-occupancy' && `${issue.count} unresolved occupancy record(s)`}
                           </li>
                         ))}
                       </ul>
@@ -709,6 +779,12 @@ function App() {
                 setFolioComparisonComplete(Boolean(fileHash));
                 setFolioWarningAcknowledgement(fileHash ? { folioFileHash: fileHash, acknowledgedAt: '' } : null);
               }}
+              onConfirmationNumberDetected={(confirmationNumber) => {
+                if (!confirmationNumber) return;
+                setProject((current) => current && !(current.pm ?? '').trim()
+                  ? { ...current, pm: confirmationNumber, updatedAt: new Date().toISOString() }
+                  : current);
+              }}
               onWarningAcknowledged={() => setFolioWarningAcknowledgement((current) => current
                 ? { ...current, acknowledgedAt: new Date().toISOString() }
                 : current)}
@@ -725,15 +801,56 @@ function App() {
             <AdditionalChargesPanel rows={additionalCharges} onChange={setAdditionalCharges} />
           </section>
           <section className="export-screen" hidden={view !== 'export'} aria-labelledby="export-preview-title">
+            {project && project.selectedGroupName && (
+              <div className="project-metadata-controls" aria-label="Excel export metadata">
+                <label>
+                  Hotel name
+                  <input
+                    type="text"
+                    value={project.hotelName ?? ''}
+                    onChange={(event) => updateProjectMetadata('hotelName', event.target.value)}
+                  />
+                </label>
+                <label>
+                  Group name for export
+                  <input
+                    type="text"
+                    value={project.groupNameOverride ?? project.selectedGroupName}
+                    onChange={(event) => updateProjectMetadata('groupNameOverride', event.target.value)}
+                  />
+                </label>
+                <label>
+                  Export date override
+                  <input
+                    type="date"
+                    value={project.reportDateOverride ?? ''}
+                    onChange={(event) => updateProjectMetadata('reportDateOverride', event.target.value)}
+                  />
+                </label>
+                <label>
+                  PM / Confirmation number
+                  <input
+                    type="text"
+                    value={project.pm ?? ''}
+                    onChange={(event) => updateProjectMetadata('pm', event.target.value)}
+                  />
+                </label>
+                <p className="muted project-metadata-note">These values affect display and export only; source report dates remain unchanged for calculations.</p>
+              </div>
+            )}
             <div className="export-language-switcher">
-              <label>
-                Export language
-                <select value={exportLanguage} onChange={(event) => setExportLanguage(event.target.value as ExportLanguage)}>
-                  <option value="usd">English / USD</option>
-                  <option value="english-ils">English / ILS</option>
-                  <option value="hebrew">עברית / ILS</option>
-                </select>
-              </label>
+              <span className="export-language-label">Export template</span>
+              <div className="export-language-options" role="group" aria-label="Export template">
+                <button type="button" className="export-language-option" aria-pressed={exportLanguage === 'usd'} onClick={() => setExportLanguage('usd')}>
+                  English / USD
+                </button>
+                <button type="button" className="export-language-option" aria-pressed={exportLanguage === 'english-ils'} onClick={() => setExportLanguage('english-ils')}>
+                  English / ILS
+                </button>
+                <button type="button" className="export-language-option" aria-pressed={exportLanguage === 'hebrew'} onClick={() => setExportLanguage('hebrew')}>
+                  עברית / ILS
+                </button>
+              </div>
             </div>
             <ExportPreview
               model={exportModel}

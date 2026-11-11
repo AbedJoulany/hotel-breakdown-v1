@@ -213,8 +213,10 @@ export function buildExportData(input: ExportBuildInput): CanonicalExportModel {
 
   return {
     metadata: {
-      hotelName: null,
-      groupName: input.selectedGroupName,
+      hotelName: input.exportMetadata?.hotelName?.trim() || null,
+      pm: input.exportMetadata?.pm?.trim() || null,
+      groupName: input.exportMetadata?.groupName?.trim() || input.selectedGroupName,
+      displayReportDate: input.exportMetadata?.reportDate ?? null,
       checkInDate: minDate(checkInDates) ?? nights[0]?.reportDate ?? null,
       checkOutDate: maxDate(checkOutDates) ?? nights.at(-1)?.reportDate ?? null,
       reportDates: nights.map((night) => night.reportDate),

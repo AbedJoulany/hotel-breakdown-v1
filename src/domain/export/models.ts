@@ -106,7 +106,9 @@ export interface CanonicalNight {
 export interface CanonicalExportModel {
   metadata: {
     hotelName: string | null;
+    pm?: string | null;
     groupName: string;
+    displayReportDate?: IsoDate | null;
     checkInDate: IsoDate | null;
     checkOutDate: IsoDate | null;
     reportDates: IsoDate[];
@@ -125,4 +127,10 @@ export interface ExportBuildInput {
   pricingRules: PricingRule[];
   additionalCharges?: AdditionalChargeRow[];
   complimentaryStaff?: ComplimentaryStaffRow[];
+  exportMetadata?: {
+    hotelName?: string | null;
+    pm?: string | null;
+    groupName?: string | null;
+    reportDate?: IsoDate | null;
+  };
 }

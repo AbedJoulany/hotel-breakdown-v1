@@ -9,6 +9,7 @@ function summary(overrides: Partial<FinancialSummary> = {}): FinancialSummary {
     missingPrices: [],
     pricingConflicts: [],
     roomConflicts: [],
+    unresolvedOccupancies: [],
     ...overrides,
   };
 }
@@ -23,6 +24,7 @@ describe('validateFinancialSummary', () => {
       roomConflicts: [{ reportDate: '2026-10-24', roomNumber: '101' }],
       pricingConflicts: [{ reportDate: '2026-10-24', roomNumber: '102', ruleIds: ['rule-1', 'rule-2'] }],
       missingPrices: [{ reportDate: '2026-10-24', roomNumber: '103', roomType: 'STR', reason: 'missing-rule' }],
+      unresolvedOccupancies: [{ reportDate: '2026-10-24', roomNumber: '104' }],
     }));
 
     expect(result).toEqual({
@@ -31,6 +33,7 @@ describe('validateFinancialSummary', () => {
         { kind: 'room-conflict', count: 1 },
         { kind: 'pricing-conflict', count: 1 },
         { kind: 'missing-price', count: 1 },
+        { kind: 'unresolved-occupancy', count: 1 },
       ],
     });
   });
