@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildExportData, applyRateOverrides } from './buildExportData';
 import type { ActiveReportDocument } from '../../domain/reports/models';
 import type { PricingRule } from '../../domain/pricing/pricingRules';
+import type { RecoveryAdjustment } from '../../domain/reports/recoveryAdjustments';
 
 const room = (roomNumber: string, adults: number | null, children: number | null, bookedRoomType = 'STR') => ({
   roomNumber,
@@ -41,6 +42,39 @@ const rule = (rate: string, currency: 'ILS' | 'USD' = 'USD'): PricingRule => ({
 });
 
 describe('buildExportData', () => {
+  it('uses the approved recovery rate and currency in the effective export model', () => {
+    const recoveredRoom = room('0826', 2, 1);
+    const recovery: RecoveryAdjustment = {
+      id: 'recovery-0826',
+      targetDate: '2026-10-25',
+      sourceDate: '2026-10-24',
+      groupName: 'Group A',
+      room: recoveredRoom,
+      proposedRate: '1000',
+      approvedRate: '1030',
+      currency: 'ILS',
+      included: true,
+      status: 'approved',
+      origin: 'previous-night-copy',
+      createdAt: '2026-11-13T00:00:00.000Z',
+    };
+    const model = buildExportData({
+      reports: [report([room('0825', 2, 1)], '2026-10-24'), report([recoveredRoom], '2026-10-25')],
+      selectedGroupName: 'Group A',
+      corrections: [],
+      pricingRules: [],
+      recoveryAdjustments: [recovery],
+    });
+
+    expect(model.nights[1].roomCharges[0]).toMatchObject({
+      roomCount: 1,
+      rate: { kind: 'numeric', value: '1030' },
+      currency: 'ILS',
+      pricingStatus: 'resolved',
+      financialCompleteness: 'complete',
+    });
+  });
+
   it('uses editable project metadata for export headers without changing report facts', () => {
     const model = buildExportData({
       reports: [report([room('0524', 2, 1)])],

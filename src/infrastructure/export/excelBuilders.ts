@@ -648,7 +648,7 @@ function writeEnglishHeaderLabel(cell: ExcelJS.Cell, value: string, position: 't
 
 function writeEnglishRoomSection(worksheet: ExcelJS.Worksheet, startRow: number, night: CanonicalNight, targetCurrency: 'USD' | 'ILS'): { totalRow: number; nextRow: number } {
   worksheet.mergeCells(`B${startRow}:F${startRow}`);
-  styleEnglishSectionRow(worksheet, startRow, 'rooms breakdon');
+  styleEnglishSectionRow(worksheet, startRow, englishNightSectionTitle(night.reportDate));
   const headerRow = startRow + 1;
   [`Occupancy`, `no. of rooms`, `cost`, `night`, `Total in ${targetCurrency === 'USD' ? '$' : targetCurrency}`].forEach((value, index) => styleEnglishTableCell(worksheet.getCell(headerRow, index + 2), value, 'header', index === 0, index === 4));
   worksheet.getRow(headerRow).height = ENGLISH_TEMPLATE_STYLE.rows.tableHeader;
@@ -658,6 +658,19 @@ function writeEnglishRoomSection(worksheet: ExcelJS.Worksheet, startRow: number,
   const totalRow = firstDetailRow + detailCount;
   writeEnglishSubtotalRow(worksheet, totalRow, ' Total Room charges', detailCount ? `=IF(COUNTIF(F${firstDetailRow}:F${totalRow - 1},"")>0,"",SUM(F${firstDetailRow}:F${totalRow - 1}))` : '=""', targetCurrency);
   return { totalRow, nextRow: totalRow + 2 };
+}
+
+function englishNightSectionTitle(reportDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(reportDate);
+  if (!match) return 'Room charges · Date unavailable';
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return 'Room charges · Date unavailable';
+  }
+  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
 }
 
 function writeEnglishRoomDetail(worksheet: ExcelJS.Worksheet, row: number, charge: CanonicalRoomChargeRow, targetCurrency: 'USD' | 'ILS') {

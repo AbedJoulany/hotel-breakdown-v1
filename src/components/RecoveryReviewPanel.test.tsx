@@ -31,6 +31,7 @@ const proposed = (overrides: Partial<RecoveryAdjustment> = {}): RecoveryAdjustme
   room,
   proposedRate: '1030',
   approvedRate: null,
+  currency: 'ILS',
   included: true,
   status: 'proposed',
   origin: 'previous-night-copy',

@@ -20,6 +20,7 @@ import type {
 import type { SupportedCurrency } from '../../domain/pricing/pricingRules';
 import type { AdditionalChargeRow } from '../../domain/charges/models';
 import type { ComplimentaryStaffRow } from '../../domain/charges/complimentaryStaffModels';
+import type { RecoveryAdjustment } from '../../domain/reports/recoveryAdjustments';
 import { ROOM_TYPES } from '../../domain/rooms/roomTypes';
 
 const OCCUPANCY_ORDER: OccupancyCategory[] = [
@@ -114,45 +115,80 @@ export function buildExportData(input: ExportBuildInput): CanonicalExportModel {
         });
       }
 
-      const pricing = matchPricingRule({
-        reportDate: report.reportDate,
-        roomType: roomType ?? '',
-        adults: room.adults,
-        children: room.children,
-      }, input.pricingRules);
+      const recoveryOverride = input.recoveryAdjustments?.find((adjustment) => adjustment.status === 'approved'
+        && adjustment.included
+        && adjustment.targetDate === report.reportDate
+        && adjustment.room.roomNumber === roomNumber
+        && groupMatchKey(adjustment.groupName) === groupMatchKey(group.groupName));
       let rate: RateValue = { kind: 'missing' };
       let currency: SupportedCurrency | null = null;
       let pricingStatus: PricingStatus = 'unresolved';
 
-      if (pricing.kind === 'matched') {
-        const numericRate = parseNumericRate(pricing.rule.rate);
+      if (recoveryOverride) {
+        const numericRate = parseNumericRate(recoveryOverride.approvedRate ?? '');
         if (numericRate) {
           rate = numericRate;
-          currency = pricing.rule.currency;
-          pricingStatus = 'resolved';
+          currency = recoveryOverride.currency;
+          pricingStatus = currency ? 'resolved' : 'missing-price';
+          if (!currency) {
+            issues.push({
+              code: 'missing-price',
+              severity: 'final-blocker',
+              affects: 'financial',
+              message: 'Approved recovery rate has no currency',
+              sourceFactIds: factIds,
+            });
+          }
         } else {
-          rate = toRateValue(pricing.rule.rate);
-          currency = pricing.rule.currency;
+          rate = toRateValue(recoveryOverride.approvedRate);
+          currency = recoveryOverride.currency;
           pricingStatus = 'unresolved';
+          issues.push({
+            code: 'missing-price',
+            severity: 'final-blocker',
+            affects: 'financial',
+            message: 'Approved recovery rate is invalid',
+            sourceFactIds: factIds,
+          });
         }
-      } else if (pricing.kind === 'missing-price') {
-        pricingStatus = 'missing-price';
-        issues.push({
-          code: 'missing-price',
-          severity: 'final-blocker',
-          affects: 'financial',
-          message: 'No valid pricing rule matched this room',
-          sourceFactIds: factIds,
-        });
       } else {
-        pricingStatus = 'pricing-conflict';
-        issues.push({
-          code: 'pricing-conflict',
-          severity: 'final-blocker',
-          affects: 'financial',
-          message: `Multiple pricing rules matched this room: ${pricing.rules.map((rule) => rule.id).join(', ')}`,
-          sourceFactIds: factIds,
-        });
+        const pricing = matchPricingRule({
+          reportDate: report.reportDate,
+          roomType: roomType ?? '',
+          adults: room.adults,
+          children: room.children,
+        }, input.pricingRules);
+
+        if (pricing.kind === 'matched') {
+          const numericRate = parseNumericRate(pricing.rule.rate);
+          if (numericRate) {
+            rate = numericRate;
+            currency = pricing.rule.currency;
+            pricingStatus = 'resolved';
+          } else {
+            rate = toRateValue(pricing.rule.rate);
+            currency = pricing.rule.currency;
+            pricingStatus = 'unresolved';
+          }
+        } else if (pricing.kind === 'missing-price') {
+          pricingStatus = 'missing-price';
+          issues.push({
+            code: 'missing-price',
+            severity: 'final-blocker',
+            affects: 'financial',
+            message: 'No valid pricing rule matched this room',
+            sourceFactIds: factIds,
+          });
+        } else {
+          pricingStatus = 'pricing-conflict';
+          issues.push({
+            code: 'pricing-conflict',
+            severity: 'final-blocker',
+            affects: 'financial',
+            message: `Multiple pricing rules matched this room: ${pricing.rules.map((rule) => rule.id).join(', ')}`,
+            sourceFactIds: factIds,
+          });
+        }
       }
 
       const groupingKey: ExportGroupingKey = {

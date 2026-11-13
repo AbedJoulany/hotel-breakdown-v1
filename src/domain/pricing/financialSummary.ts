@@ -2,6 +2,7 @@ import { findRoomConflicts } from '../reports/roomOccupancy';
 import type { RoomRecord } from '../reports/models';
 import type { IsoDate } from '../shared/types';
 import { matchPricingRule, type PricingRule, type SupportedCurrency } from './pricingRules';
+import type { RecoveryAdjustment } from '../reports/recoveryAdjustments';
 
 export interface FinancialPricingDay {
   reportDate: IsoDate;
@@ -51,6 +52,7 @@ export interface FinancialSummary {
 export function calculateFinancialSummary(
   days: FinancialPricingDay[],
   rules: PricingRule[],
+  recoveryAdjustments: RecoveryAdjustment[] = [],
 ): FinancialSummary {
   const totals: Record<SupportedCurrency, bigint> = { ILS: 0n, USD: 0n };
   const summary: Omit<FinancialSummary, 'totals'> = {
@@ -81,6 +83,31 @@ export function calculateFinancialSummary(
         continue;
       }
       const roomType = room.bookedRoomType ?? room.actualRoomType ?? '';
+      const recoveryOverride = recoveryAdjustments.find((adjustment) => adjustment.status === 'approved'
+        && adjustment.included
+        && adjustment.targetDate === day.reportDate
+        && adjustment.room.roomNumber === roomNumber);
+
+      if (recoveryOverride) {
+        const minorUnits = recoveryOverride.currency && recoveryOverride.approvedRate !== null
+          ? parseRateToMinorUnits(recoveryOverride.approvedRate)
+          : null;
+        if (minorUnits === null) {
+          summary.missingPrices.push({ reportDate: day.reportDate, roomNumber, roomType, reason: 'invalid-rate' });
+          continue;
+        }
+
+        totals[recoveryOverride.currency!] += minorUnits;
+        summary.charges.push({
+          reportDate: day.reportDate,
+          roomNumber,
+          roomType,
+          rate: formatMinorUnits(minorUnits),
+          currency: recoveryOverride.currency!,
+        });
+        continue;
+      }
+
       const result = matchPricingRule({
         reportDate: day.reportDate,
         roomType,

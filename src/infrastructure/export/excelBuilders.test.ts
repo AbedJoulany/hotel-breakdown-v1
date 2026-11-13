@@ -372,7 +372,7 @@ describe('Excel builders', () => {
     expect(sheet.getCell('F8').border.left?.style).toBe('medium');
     expect(sheet.getCell('F8').border.right?.style).toBe('thin');
     expect(sheet.model.merges).toEqual(expect.arrayContaining(['B8:E8', 'B9:E9', 'B10:E10', 'B11:E11', 'B12:E12', 'B14:F14', 'B21:F21']));
-    expect(sheet.getCell('B14').value).toBe('rooms breakdon');
+    expect(sheet.getCell('B14').value).toBe('24/10/2026');
     expect(sheet.getCell('B15').value).toBe('Occupancy');
     expect(sheet.getCell('B16').value).toContain('Orient Room');
     expect(sheet.getRow(14).height).toBe(19.5);
@@ -384,7 +384,7 @@ describe('Excel builders', () => {
     expect(sheet.getCell('B15').border.top?.style).toBe('medium');
     expect(sheet.getCell('F16').border.right?.style).toBe('medium');
     expect(sheet.getCell('F19').value).toMatchObject({ formula: expect.stringContaining('F16:F18') });
-    expect(sheet.getCell('B21').value).toBe('rooms breakdon');
+    expect(sheet.getCell('B21').value).toBe('25/10/2026');
     expect(sheet.getCell('F26').value).toMatchObject({ formula: expect.stringContaining('F23:F25') });
     expect(sheet.getCell('F28').value).toMatchObject({ formula: expect.stringContaining('F19') });
     expect(sheet.getCell('F28').value).toMatchObject({ formula: expect.stringContaining('F26') });
@@ -498,7 +498,7 @@ describe('Excel builders', () => {
   it.each([0, 1, 2, 3])('renders %i dynamic English USD room sections without stale references', async (count) => {
     const nights = Array.from({ length: count }, (_, index) => usdNight(`2026-10-${String(24 + index).padStart(2, '0')}`, index + 1));
     const sheet = (await buildUsdWorkbook(englishModel(nights))).worksheets[0];
-    expect(sheet.getCell('B14').value).toBe(count ? 'rooms breakdon' : ' Total Room charges in USD');
+    expect(sheet.getCell('B14').value).toBe(count ? '24/10/2026' : ' Total Room charges in USD');
     expect(sheet.getImages()).toHaveLength(1);
     if (count > 0) {
       let cursor = 14;
@@ -519,6 +519,42 @@ describe('Excel builders', () => {
     expect(finalFormula).toMatchObject({ formula: expect.stringContaining('F') });
     expect(finalFormula).toMatchObject({ formula: expect.stringContaining('F') });
     expect(sheet.pageSetup.printArea).toMatch(/^A1:G\d+$/);
+  });
+
+  it('uses each room night date as the English section title, including recovered dates', async () => {
+    const nights = [usdNight('2026-10-31', 1), usdNight('2026-11-01', 1), usdNight('2026-11-02', 1)];
+    const sheet = (await buildUsdWorkbook(englishModel(nights))).worksheets[0];
+
+    expect(sheet.getCell('B14').value).toBe('31/10/2026');
+    expect(sheet.getCell('B19').value).toBe('01/11/2026');
+    expect(sheet.getCell('B24').value).toBe('02/11/2026');
+  });
+
+  it('exports approved recovered room amounts in Hebrew and English sections', async () => {
+    const recovered = night('2026-11-02', 1);
+    recovered.roomCharges[0] = { ...recovered.roomCharges[0], rate: { kind: 'numeric', value: '1030' }, currency: 'ILS' };
+    const exportModel = model([night('2026-10-31', 1), recovered]);
+    const hebrew = await buildHebrewWorkbook(exportModel);
+    const english = await buildUsdWorkbook(exportModel, 'ILS');
+
+    expect(hebrew.worksheets[0].getCell('B21').value).toBe('פירוט עלויות · 2026-11-02');
+    expect(hebrew.worksheets[0].getCell('C23').value).toBe(1030);
+    expect(hebrew.worksheets[0].getCell('F23').value).toMatchObject({ formula: expect.stringContaining('D23*C23*E23') });
+    expect(hebrew.worksheets[0].getCell('F25').value).toMatchObject({ formula: expect.stringContaining('F24*1.18') });
+    expect(hebrew.worksheets[0].getCell('F27').value).toMatchObject({ formula: expect.stringContaining('F19') });
+    expect(hebrew.worksheets[0].getCell('F27').value).toMatchObject({ formula: expect.stringContaining('F25') });
+    expect(english.worksheets[0].getCell('B19').value).toBe('02/11/2026');
+    expect(english.worksheets[0].getCell('D21').value).toBe(1030);
+    expect(english.worksheets[0].getCell('F21').value).toMatchObject({ formula: expect.stringContaining('C21*D21*E21') });
+    expect(english.worksheets[0].getCell('F22').value).toMatchObject({ formula: expect.stringContaining('F21:F21') });
+    expect(english.worksheets[0].getCell('F24').value).toMatchObject({ formula: expect.stringContaining('F17') });
+    expect(english.worksheets[0].getCell('F24').value).toMatchObject({ formula: expect.stringContaining('F22') });
+  });
+
+  it('uses a safe fallback for an invalid English room night date', async () => {
+    const sheet = (await buildUsdWorkbook(englishModel([usdNight('2026-02-30', 1)]))).worksheets[0];
+
+    expect(sheet.getCell('B14').value).toBe('Room charges · Date unavailable');
   });
 
   it('preserves USD blank propagation without VAT or currency conversion', async () => {
