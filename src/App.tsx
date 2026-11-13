@@ -17,6 +17,7 @@ import { validateFinancialSummary } from './domain/pricing/financialValidation';
 import PricingRulesPanel from './components/PricingRulesPanel';
 import FolioComparisonPanel from './components/FolioComparisonPanel';
 import type { GroupRoomForFolioComparison } from './domain/folio/models';
+import type { FolioStayComparisonResult } from './domain/folio/models';
 import { hashArrayBuffer } from './infrastructure/files/hashArrayBuffer';
 import { loadWorkspaceSnapshot, saveWorkspaceSnapshot } from './infrastructure/storage/workspaceStore';
 import type { FolioWarningAcknowledgement } from './infrastructure/storage/workspaceStore';
@@ -29,6 +30,9 @@ import AdditionalChargesPanel from './components/AdditionalChargesPanel';
 import { createAdditionalChargeRow, type AdditionalChargeRow } from './domain/charges/models';
 import ComplimentaryStaffPanel from './components/ComplimentaryStaffPanel';
 import { createComplimentaryStaffRow, type ComplimentaryStaffRow } from './domain/charges/complimentaryStaffModels';
+import { applyRecoveryAdjustments, type RecoveryAdjustment } from './domain/reports/recoveryAdjustments';
+import RecoveryReviewPanel, { type RecoveryCandidate } from './components/RecoveryReviewPanel';
+import type { IsoDate } from './domain/shared/types';
 
 type View = 'home' | 'workspace' | 'folio' | 'complimentary-staff' | 'additional-charges' | 'export';
 type UploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
@@ -78,6 +82,8 @@ function App() {
   const [rateOverrides, setRateOverrides] = useState<Map<string, string>>(new Map());
   const [folioWarningAcknowledgement, setFolioWarningAcknowledgement] = useState<FolioWarningAcknowledgement | null>(null);
   const [folioComparisonComplete, setFolioComparisonComplete] = useState(false);
+  const [folioComparisonResults, setFolioComparisonResults] = useState<FolioStayComparisonResult[]>([]);
+  const [recoveryAdjustments, setRecoveryAdjustments] = useState<RecoveryAdjustment[]>([]);
   useEffect(() => {
     setDateInputValues({
       start: project?.dateRange.start ?? '',
@@ -111,18 +117,19 @@ function App() {
       ),
     })),
   }));
+  const effectiveReports = useMemo(
+    () => applyRecoveryAdjustments(correctedReports, recoveryAdjustments),
+    [reports, corrections, recoveryAdjustments],
+  );
   const roomNightSummary = project?.selectedGroupName
-    ? calculateGroupRoomNights(correctedReports, project.selectedGroupName)
+    ? calculateGroupRoomNights(effectiveReports, project.selectedGroupName)
     : null;
   const selectedPricingDays = project?.selectedGroupName
-    ? analyses.flatMap((report) => report.groups
+    ? effectiveReports.flatMap((report) => report.groupSnapshots
       .filter((group) => groupMatchKey(group.groupName) === groupMatchKey(project.selectedGroupName ?? ''))
       .map((group) => ({
         reportDate: report.reportDate as `${number}-${number}-${number}`,
-        rooms: applyRoomCorrections(
-          group.rooms,
-          corrections.filter((correction) => correction.reportId === group.reportId),
-        ),
+        rooms: group.rooms,
       })))
     : [];
   const financialSummary = project?.selectedGroupName
@@ -132,9 +139,9 @@ function App() {
   const invalidDateInputs = (['start', 'end'] as const).filter((field) => dateInputValues[field].trim() !== '' && !parseDateInput(dateInputValues[field]));
   const baseExportModel = useMemo(() => project?.selectedGroupName
     ? buildExportData({
-      reports,
+      reports: effectiveReports,
       selectedGroupName: project.selectedGroupName,
-      corrections,
+      corrections: [],
       pricingRules,
       additionalCharges,
       complimentaryStaff,
@@ -145,29 +152,46 @@ function App() {
         reportDate: project.reportDateOverride,
       },
     })
-    : null, [reports, project?.selectedGroupName, project?.hotelName, project?.pm, project?.groupNameOverride, project?.reportDateOverride, corrections, pricingRules, additionalCharges, complimentaryStaff]);
+    : null, [effectiveReports, project?.selectedGroupName, project?.hotelName, project?.pm, project?.groupNameOverride, project?.reportDateOverride, corrections, pricingRules, additionalCharges, complimentaryStaff]);
   const exportModel = useMemo(() => baseExportModel ? applyRateOverrides(baseExportModel, rateOverrides) : null, [baseExportModel, rateOverrides]);
-  const selectedFolioGroupRooms: GroupRoomForFolioComparison[] = project?.selectedGroupName
-    ? analyses.flatMap((report) => report.groups
+  const selectedFolioGroupRooms = useMemo<GroupRoomForFolioComparison[]>(() => project?.selectedGroupName
+    ? effectiveReports.flatMap((report) => report.groupSnapshots
       .filter((group) => groupMatchKey(group.groupName) === groupMatchKey(project.selectedGroupName ?? ''))
-      .flatMap((group) => applyRoomCorrections(
-        group.rooms,
-        corrections.filter((correction) => correction.reportId === group.reportId),
-      ).map((room) => ({
+      .flatMap((group) => group.rooms.map((room) => ({
         reportDate: report.reportDate as GroupRoomForFolioComparison['reportDate'],
         roomNumber: room.roomNumber,
         guestName: room.guestName,
         reportedRate: room.reportedRate,
+        fromDate: room.fromDate,
+        toDate: room.toDate,
       }))))
-    : [];
+    : [], [effectiveReports, project?.selectedGroupName, corrections]);
+  const recoveryCandidates = useMemo<RecoveryCandidate[]>(() => {
+    if (!project?.selectedGroupName) return [];
+    const targetDates = [...new Set(folioComparisonResults.flatMap((result) => result.missingGroupReportDates ?? []))].sort();
+    return targetDates.map((targetDate) => {
+      const sourceReport = [...correctedReports]
+        .filter((report) => report.reportDate < targetDate)
+        .sort((left, right) => right.reportDate.localeCompare(left.reportDate))
+        .find((report) => report.groupSnapshots.some((group) => groupMatchKey(group.groupName) === groupMatchKey(project.selectedGroupName ?? '')));
+      const sourceGroup = sourceReport?.groupSnapshots.find((group) => groupMatchKey(group.groupName) === groupMatchKey(project.selectedGroupName ?? ''));
+      const targetReport = effectiveReports.find((report) => report.reportDate === targetDate);
+      const targetGroup = targetReport?.groupSnapshots.find((group) => groupMatchKey(group.groupName) === groupMatchKey(project.selectedGroupName ?? ''));
+      const existingRooms = new Set(targetGroup?.rooms.map((room) => room.roomNumber) ?? []);
+      const rooms = [...new Map((sourceGroup?.rooms ?? [])
+        .filter((room) => !existingRooms.has(room.roomNumber))
+        .map((room) => [room.roomNumber, room])).values()];
+      return { targetDate, sourceDate: sourceReport?.reportDate ?? null, rooms };
+    });
+  }, [folioComparisonResults, correctedReports, effectiveReports, project?.selectedGroupName]);
   useEffect(() => {
     if (!project) {
       return;
     }
 
-    void saveWorkspaceSnapshot({ project, reports, analyses, analysis, corrections, correctionHistory, pricingRules, additionalCharges, complimentaryStaff, folioWarningAcknowledgement })
+    void saveWorkspaceSnapshot({ project, reports, analyses, analysis, corrections, correctionHistory, pricingRules, additionalCharges, complimentaryStaff, folioWarningAcknowledgement, recoveryAdjustments })
       .catch(() => setError('Could not save the workspace locally.'));
-  }, [analysis, analyses, project, reports, corrections, correctionHistory, pricingRules, additionalCharges, complimentaryStaff, folioWarningAcknowledgement]);
+  }, [analysis, analyses, project, reports, corrections, correctionHistory, pricingRules, additionalCharges, complimentaryStaff, folioWarningAcknowledgement, recoveryAdjustments]);
 
   useEffect(() => {
     if (!baseExportModel) return;
@@ -351,6 +375,8 @@ function App() {
     setComplimentaryStaff([createComplimentaryStaffRow('complimentary-staff-1')]);
     setFolioWarningAcknowledgement(null);
     setFolioComparisonComplete(false);
+    setFolioComparisonResults([]);
+    setRecoveryAdjustments([]);
     setProject(createProject({
       id: `project-${Date.now()}`,
       name: 'Untitled Project',
@@ -395,6 +421,8 @@ function App() {
       setComplimentaryStaff(snapshot.complimentaryStaff?.length ? snapshot.complimentaryStaff : [createComplimentaryStaffRow('complimentary-staff-1')]);
       setFolioWarningAcknowledgement(snapshot.folioWarningAcknowledgement ?? null);
       setFolioComparisonComplete(false);
+      setFolioComparisonResults([]);
+      setRecoveryAdjustments(snapshot.recoveryAdjustments ?? []);
       setReportMessage('Saved project restored.');
     } catch {
       setError('Could not load the saved workspace from this device.');
@@ -416,6 +444,84 @@ function App() {
       [field]: field === 'reportDateOverride' ? (value ? parseDateInput(value) : null) : value,
       updatedAt: new Date().toISOString(),
     } : current);
+  }
+
+  function createRecoveryProposal(candidate: RecoveryCandidate) {
+    if (!project?.selectedGroupName || !candidate.sourceDate) return;
+    const now = new Date().toISOString();
+    const next = candidate.rooms.map((room, index): RecoveryAdjustment => ({
+      id: `recovery-${candidate.targetDate}-${room.roomNumber}-${index}-${Date.now()}`,
+      targetDate: candidate.targetDate,
+      sourceDate: candidate.sourceDate as IsoDate,
+      groupName: project.selectedGroupName as string,
+      room: { ...room },
+      proposedRate: room.reportedRate,
+      approvedRate: null,
+      included: true,
+      status: 'proposed',
+      origin: 'previous-night-copy',
+      createdAt: now,
+    }));
+    setRecoveryAdjustments((current) => [...current.filter((entry) => entry.targetDate !== candidate.targetDate), ...next]);
+    setError(null);
+  }
+
+  function updateRecoveryAdjustment(id: string, patch: Partial<Pick<RecoveryAdjustment, 'room' | 'proposedRate' | 'included'>>) {
+    setRecoveryAdjustments((current) => current.map((entry) => entry.id === id ? { ...entry, ...patch } : entry));
+  }
+
+  function approveRecovery(targetDate: IsoDate) {
+    const rows = recoveryAdjustments.filter((entry) => entry.targetDate === targetDate);
+    const selected = rows.filter((entry) => entry.included);
+    if (selected.length === 0) {
+      setError('Select at least one room before approving the recovery.');
+      return;
+    }
+    if (selected.some((entry) => entry.proposedRate === null || entry.proposedRate.trim() === '' || !Number.isFinite(Number(entry.proposedRate)) || Number(entry.proposedRate) < 0 || entry.room.rooms === null || !Number.isInteger(entry.room.rooms) || entry.room.rooms < 0)) {
+      setError('Recovery rates and quantities must be valid non-negative numbers.');
+      return;
+    }
+    const duplicateRoom = selected.some((entry, index) => selected.findIndex((candidate) => candidate.room.roomNumber === entry.room.roomNumber) !== index);
+    if (duplicateRoom) {
+      setError('A recovery cannot contain duplicate room/date entries.');
+      return;
+    }
+    const targetReport = effectiveReports.find((report) => report.reportDate === targetDate);
+    const currentRecoveryRooms = new Set(rows.map((entry) => entry.room.roomNumber));
+    const existingRooms = new Set(targetReport?.groupSnapshots
+      .find((group) => project?.selectedGroupName && groupMatchKey(group.groupName) === groupMatchKey(project.selectedGroupName))
+      ?.rooms.filter((room) => !currentRecoveryRooms.has(room.roomNumber)).map((room) => room.roomNumber) ?? []);
+    if (selected.some((entry) => existingRooms.has(entry.room.roomNumber))) {
+      setError('A selected recovery room already exists in the effective report.');
+      return;
+    }
+    setRecoveryAdjustments((current) => current.map((entry) => entry.targetDate === targetDate
+      ? { ...entry, status: 'approved', approvedRate: entry.included ? entry.proposedRate : null }
+      : entry));
+    setError(null);
+  }
+
+  function cancelRecovery(targetDate: IsoDate) {
+    const rows = recoveryAdjustments.filter((entry) => entry.targetDate === targetDate);
+    if (rows.some((entry) => entry.approvedRate !== null)) {
+      setRecoveryAdjustments((current) => current.map((entry) => entry.targetDate === targetDate
+        ? { ...entry, status: 'approved', proposedRate: entry.approvedRate, included: entry.approvedRate !== null }
+        : entry));
+    } else {
+      setRecoveryAdjustments((current) => current.filter((entry) => entry.targetDate !== targetDate));
+    }
+    setError(null);
+  }
+
+  function editRecovery(targetDate: IsoDate) {
+    setRecoveryAdjustments((current) => current.map((entry) => entry.targetDate === targetDate
+      ? { ...entry, status: 'proposed', proposedRate: entry.approvedRate ?? entry.proposedRate, included: entry.approvedRate !== null }
+      : entry));
+  }
+
+  function removeRecovery(targetDate: IsoDate) {
+    setRecoveryAdjustments((current) => current.filter((entry) => entry.targetDate !== targetDate));
+    setError(null);
   }
 
   function handleRoomCorrection(
@@ -785,9 +891,20 @@ function App() {
                   ? { ...current, pm: confirmationNumber, updatedAt: new Date().toISOString() }
                   : current);
               }}
+              onComparisonResults={setFolioComparisonResults}
               onWarningAcknowledged={() => setFolioWarningAcknowledgement((current) => current
                 ? { ...current, acknowledgedAt: new Date().toISOString() }
                 : current)}
+            />
+            <RecoveryReviewPanel
+              candidates={recoveryCandidates}
+              adjustments={recoveryAdjustments}
+              onCreateProposal={createRecoveryProposal}
+              onUpdateAdjustment={updateRecoveryAdjustment}
+              onApprove={approveRecovery}
+              onCancel={cancelRecovery}
+              onEdit={editRecovery}
+              onRemove={removeRecovery}
             />
           </section>
           <section className="placeholder-screen" hidden={view !== 'complimentary-staff'} aria-labelledby="complimentary-staff-screen-title">

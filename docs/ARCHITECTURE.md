@@ -1,6 +1,6 @@
 # Hotel Breakdown V1 - Architecture
 
-Last reviewed: 2026-11-06
+Last reviewed: 2026-11-12
 
 ## Status legend
 
@@ -31,6 +31,7 @@ Implemented domain modules include:
 - `src/domain/reports/models.ts`: room, daily group, report, and candidate models.
 - `src/domain/reports/normalizeGroupReportRow.ts`: raw Group Report row normalization.
 - `src/domain/reports/replaceReport.ts`: one-active-report-per-date replacement rules.
+- `src/domain/reports/recoveryAdjustments.ts`: immutable-original plus approved-recovery derivation into an effective report collection.
 - `src/domain/reports/roomOccupancy.ts`: unique-room counting and duplicate/conflict detection.
 - `src/domain/rooms/roomTypes.ts`: English/Hebrew room-type catalog.
 - `src/domain/folio/models.ts` and `src/domain/folio/compareFolio.ts`: Folio comparison contracts and deterministic room-level comparison without PDF or UI dependencies.
@@ -69,6 +70,7 @@ Implemented UI behavior in `src/App.tsx`:
 - Editable date range with one native `date` control supporting calendar selection and keyboard entry, coverage/missing-date warnings, and basic Room-Nights summary. The visible report/group list follows the selected range while the active report collection remains preserved.
 - Selected-group room details grouped by report date.
 - Conflict detail review with manual record selection, derived corrected summaries, and correction history.
+- Missing-night recovery review with proposal generation from the nearest preceding selected-group report, room selection, rate/quantity editing, explicit approval, edit, cancel, and removal.
 - Selected-group room table with Booked/Actual Room Type, Adults/Children occupancy, Reported Price, and Pricing status.
 - Compact Financial Summary with separate ILS and USD totals.
 - Folio upload, separate ILS/USD totals, and room-level comparison statuses for the selected group.
@@ -76,6 +78,7 @@ Implemented UI behavior in `src/App.tsx`:
 - Workspace-to-Folio navigation reuses the active project state and keeps the mounted `FolioComparisonPanel` instance while switching views.
 - Pricing-rule entry and selected-group report-rate suggestions at the UI boundary; active rules are included in the local snapshot, and the domain matcher returns `Matched`, `Pricing Conflict`, or `Missing Price` without calculating money.
 - IndexedDB snapshot persistence for project state, active report metadata, parsed analyses, active corrections, and correction history.
+- IndexedDB snapshot persistence for recovery adjustments separately from original reports.
 - `Continue Project` restoration from the local workspace snapshot.
 - User-visible analysis errors.
 
@@ -95,6 +98,22 @@ Local PDF file(s)
   -> coverage and room-night summaries
   -> React Workspace summary
 ```
+
+Recovery data flow:
+
+```text
+Folio coverage warning
+  -> missing target date
+  -> nearest preceding selected-group report
+  -> proposed RecoveryAdjustment rows
+  -> user review/edit/exclusion
+  -> explicit approval
+  -> applyRecoveryAdjustments()
+  -> effective report collection
+  -> room-night summary, Folio comparison, and Excel export
+```
+
+The original active reports remain the immutable parsed source for audit. Recovery adjustments are a separate persisted layer; only approved and included rows are added to the derived effective collection.
 
 Project metadata overrides flow separately to export headers:
 
@@ -122,6 +141,7 @@ Implemented invariants:
 - One active valid report is retained per `reportDate`.
 - Exact duplicate reports are ignored.
 - An invalid candidate cannot replace a valid active report.
+- Recovery adjustments never mutate original report objects. Only approved included adjustments are applied, and an existing room number on the same target date is not duplicated.
 
 Basic financial calculation is implemented with integer minor units, two-decimal ILS/USD totals, separate currencies, and per-room-night rounding. Hebrew VAT is applied to room charges, approved Additional Charges, and Complimentary/Staff rows in the Hebrew export; Hebrew Complimentary/Staff totals are included in the Hebrew overall total. English export supports separate `USD` and `ILS` template choices, applies no VAT, and does not convert between currencies. The pure Final Export gate is implemented. Pricing conflict and Missing Price results are connected to the displayed financial summary. Folio comparison accepts normalized entries, and `src/infrastructure/pdf/parseFolio.ts` maps the inspected layout into those entries plus separate ILS/USD summary totals while excluding account rows; the UI aggregates comparison by room and guest across dates, and the pure Final Export gate combines financial blockers with unacknowledged Folio warnings.
 
@@ -150,6 +170,7 @@ Implemented test layers:
 - Parser tests using ILS and USD reports across multiple pages.
 - Application composition test using a real Group Report.
 - UI tests for Home actions, upload control, and analysis result display.
+- Recovery domain tests for immutability and duplicate prevention, plus review-panel tests for proposal creation, exclusion, rate editing, approval, and cancellation.
 
 The current checks are:
 

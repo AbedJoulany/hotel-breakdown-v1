@@ -1,5 +1,6 @@
 import type { FolioComparisonResult, FolioEntry, FolioStayComparisonResult, GroupRoomForFolioComparison } from './models';
 import type { SupportedCurrency } from '../pricing/pricingRules';
+import type { IsoDate } from '../shared/types';
 
 export const FOLIO_AMOUNT_TOLERANCE_MINOR_UNITS = 1n;
 
@@ -91,10 +92,22 @@ export function summarizeFolioStayComparison(
     folioByStay.set(key, [...(folioByStay.get(key) ?? []), entry]);
   }
 
-  const keys = new Set([...groupByStay.keys(), ...folioByStay.keys()]);
-  return [...keys].sort().map((key) => {
-    const groupRows = groupByStay.get(key) ?? [];
-    const entries = folioByStay.get(key) ?? [];
+  const consumedFolioKeys = new Set<string>();
+  const rows: Array<{ key: string; groupRows: GroupRoomForFolioComparison[]; entries: FolioEntry[] }> = [];
+  for (const key of groupByStay.keys()) {
+    const matchingFolioKeys = [...folioByStay.keys()].filter((folioKey) => stayKeysMatch(key, folioKey));
+    matchingFolioKeys.forEach((folioKey) => consumedFolioKeys.add(folioKey));
+    rows.push({
+      key,
+      groupRows: groupByStay.get(key) ?? [],
+      entries: matchingFolioKeys.flatMap((folioKey) => folioByStay.get(folioKey) ?? []),
+    });
+  }
+  for (const key of folioByStay.keys()) {
+    if (!consumedFolioKeys.has(key)) rows.push({ key, groupRows: [], entries: folioByStay.get(key) ?? [] });
+  }
+
+  return rows.sort((left, right) => left.key.localeCompare(right.key)).map(({ groupRows, entries }) => {
     const groupRoom = groupRows[0];
     const folioEntry = entries[0];
     const roomNumber = groupRoom?.roomNumber ?? folioEntry?.roomNumber ?? '';
@@ -104,11 +117,17 @@ export function summarizeFolioStayComparison(
     const folioNightCount = entries.length > 0 && entries.every((entry) => entry.nights !== null)
       ? entries.reduce((total, entry) => total + (entry.nights ?? 0), 0)
       : null;
+    const missingGroupReportDates = findMissingGroupReportDates(groupRows, entries);
+    const expectedMissingDates = findExpectedMissingDates(groupRows);
+    const coverageWarning = expectedMissingDates.length > 0 && missingGroupReportDates.length === 0
+      ? 'possible-incomplete-coverage' as const
+      : undefined;
 
     let status: FolioStayComparisonResult['status'];
     if (!groupRoom) status = 'missing-in-group';
     else if (entries.length === 0) status = 'missing-in-folio';
     else if (groupAmount === null || folioAmount === null) status = 'data-missing';
+    else if (missingGroupReportDates.length > 0) status = 'incomplete-group-report';
     else status = amountsMatchWithinTolerance(groupAmount, folioAmount) ? 'matched' : 'amount-mismatch';
 
     return {
@@ -121,13 +140,79 @@ export function summarizeFolioStayComparison(
       folioAmount,
       currency: currency ?? null,
       status,
+      ...(missingGroupReportDates.length > 0 ? { missingGroupReportDates } : {}),
+      ...(coverageWarning ? { coverageWarning } : {}),
     };
   });
+}
+
+function findExpectedMissingDates(groupRows: GroupRoomForFolioComparison[]): IsoDate[] {
+  const expected = new Set<IsoDate>();
+  for (const room of groupRows) {
+    for (const date of stayDates(room.fromDate, room.toDate)) expected.add(date);
+  }
+  const observed = new Set(groupRows.map((room) => room.reportDate));
+  return [...expected].filter((date) => !observed.has(date)).sort();
+}
+
+function findMissingGroupReportDates(
+  groupRows: GroupRoomForFolioComparison[],
+  entries: FolioEntry[],
+): IsoDate[] {
+  const folioDates = new Set(entries.map((entry) => entry.transactionDate));
+  return findExpectedMissingDates(groupRows).filter((date) => folioDates.has(date));
+}
+
+function stayDates(fromDate: IsoDate | null | undefined, toDate: IsoDate | null | undefined): IsoDate[] {
+  if (!fromDate || !toDate || fromDate >= toDate) return [];
+  const dates: IsoDate[] = [];
+  const cursor = new Date(`${fromDate}T00:00:00Z`);
+  const end = new Date(`${toDate}T00:00:00Z`);
+  while (cursor < end) {
+    dates.push(cursor.toISOString().slice(0, 10) as IsoDate);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return dates;
 }
 
 function stayKey(roomNumber: string, guestName: string): string {
   const nameParts = guestName.trim().replace(/\s+/gu, ' ').toLocaleLowerCase().split(' ').sort();
   return `${roomNumber}|${nameParts.join(' ')}`;
+}
+
+function stayKeysMatch(left: string, right: string): boolean {
+  if (left === right) return true;
+  const leftSeparator = left.indexOf('|');
+  const rightSeparator = right.indexOf('|');
+  if (leftSeparator < 0 || rightSeparator < 0 || left.slice(0, leftSeparator) !== right.slice(0, rightSeparator)) return false;
+  return guestNamesMatch(left.slice(leftSeparator + 1), right.slice(rightSeparator + 1));
+}
+
+function guestNamesMatch(left: string, right: string): boolean {
+  const leftParts = left.split(' ').filter(Boolean);
+  const remainingRightParts = right.split(' ').filter(Boolean);
+  if (leftParts.length !== remainingRightParts.length) return false;
+  let prefixDifferences = 0;
+  for (const leftPart of leftParts) {
+    const exactIndex = remainingRightParts.indexOf(leftPart);
+    if (exactIndex >= 0) {
+      remainingRightParts.splice(exactIndex, 1);
+      continue;
+    }
+    const prefixIndex = remainingRightParts.findIndex((rightPart) => {
+      const shorter = leftPart.length <= rightPart.length ? leftPart : rightPart;
+      const longer = leftPart.length <= rightPart.length ? rightPart : leftPart;
+      return shorter.length >= 6 && longer.startsWith(shorter);
+    });
+    if (prefixIndex < 0) return false;
+    const matchedPart = remainingRightParts[prefixIndex];
+    const shorter = leftPart.length <= matchedPart.length ? leftPart : matchedPart;
+    const longer = leftPart.length <= matchedPart.length ? matchedPart : leftPart;
+    if (shorter.length < 6 || !longer.startsWith(shorter)) return false;
+    remainingRightParts.splice(prefixIndex, 1);
+    prefixDifferences += 1;
+  }
+  return prefixDifferences <= 1;
 }
 
 function sumAmounts(amounts: string[]): string | null {
