@@ -138,9 +138,7 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
   }
 
   const combinedRow = row;
-  const combinedFormula = includingVatRefs.length
-    ? `=IF(OR(${includingVatRefs.map((ref) => `${ref}=""`).join(',')}),"",SUM(${includingVatRefs.join(',')}))`
-    : '=""';
+  const combinedFormula = includingVatRefs.length ? `=SUM(${includingVatRefs.join(',')})` : '=0';
   writeHebrewTotalRow(worksheet, combinedRow, labels.includingVat, combinedFormula, HEBREW_TEMPLATE_STYLE.colors.overall, style, 'combined');
 
   const staffStartRow = combinedRow + 2;
@@ -152,7 +150,7 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
     worksheet,
     finalTotalRow,
     'סה"כ לתשלום חדרים + עלויות נלוות כולל מע"מ',
-    `=IF(OR(F${combinedRow}="",F${staff.includingVatRow}="",F${extras.includingVatRow}=""),"",F${combinedRow}+F${staff.includingVatRow}+F${extras.includingVatRow})`,
+    `=SUM(F${combinedRow},F${staff.includingVatRow},F${extras.includingVatRow})`,
     HEBREW_TEMPLATE_STYLE.colors.header,
     style,
     'includingVat',
@@ -163,7 +161,7 @@ async function buildHebrewWorkbookScratch(model: CanonicalExportModel): Promise<
     worksheet,
     balanceRow,
     'סה"כ לתשלום חדרים + עלויות נלוות כולל מע"מ',
-    `=IF(OR(F${finalTotalRow}="",F${finalTotalRow + 1}=""),"",F${finalTotalRow}-F${finalTotalRow + 1})`,
+    `=F${finalTotalRow}-F${finalTotalRow + 1}`,
     HEBREW_TEMPLATE_STYLE.colors.header,
     style,
     'includingVat',
@@ -196,14 +194,14 @@ function writeHebrewAdditionalChargesSection(
   worksheet.mergeCells(`B${subtotalRow}:E${subtotalRow}`);
   worksheet.getCell(`B${subtotalRow}`).value = 'סה"כ לאקסטרות לא כולל מע"מ';
   for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(subtotalRow, column), style, 'subtotal', style.subtotalFill);
-  worksheet.getCell(`F${subtotalRow}`).value = { formula: dataCount ? `=IF(COUNTIF(F${firstRow}:F${dataLastRow},"")>0,"",SUM(F${firstRow}:F${dataLastRow}))` : '=""' };
+  worksheet.getCell(`F${subtotalRow}`).value = { formula: dataCount ? `=SUM(F${firstRow}:F${dataLastRow})` : '=0' };
   styleHebrewTotalValue(worksheet.getCell(`F${subtotalRow}`), style, 'subtotal', style.subtotalFill);
   worksheet.getCell(`F${subtotalRow}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
   const includingVatRow = subtotalRow + 1;
   worksheet.mergeCells(`B${includingVatRow}:E${includingVatRow}`);
   worksheet.getCell(`B${includingVatRow}`).value = 'סה\'\'כ לאקסטרות כולל מע"מ';
   for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(includingVatRow, column), style, 'includingVat', HEBREW_TEMPLATE_STYLE.colors.header);
-  worksheet.getCell(`F${includingVatRow}`).value = { formula: `=IF(F${subtotalRow}="","",F${subtotalRow}*1.18)` };
+  worksheet.getCell(`F${includingVatRow}`).value = { formula: `=F${subtotalRow}*1.18` };
   styleHebrewTotalValue(worksheet.getCell(`F${includingVatRow}`), style, 'includingVat', HEBREW_TEMPLATE_STYLE.colors.header);
   worksheet.getCell(`F${includingVatRow}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
   return { includingVatRow };
@@ -221,8 +219,8 @@ function writeHebrewAdditionalChargeRow(
   worksheet.getCell(`D${row}`).value = charge?.quantity.kind === 'numeric' ? Number(charge.quantity.value) : null;
   worksheet.getCell(`E${row}`).value = charge?.number.kind === 'numeric' ? Number(charge.number.value) : null;
   worksheet.getCell(`F${row}`).value = complete
-    ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` }
-    : { formula: '=""' };
+    ? { formula: `=C${row}*D${row}*E${row}` }
+    : { formula: '=0' };
   styleHebrewTemplateDetailRow(worksheet, row, style, !complete && Boolean(charge));
   worksheet.getCell(`C${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
   worksheet.getCell(`F${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
@@ -251,14 +249,14 @@ function writeHebrewComplimentaryStaffSection(
   worksheet.mergeCells(`B${subtotalRow}:E${subtotalRow}`);
   worksheet.getCell(`B${subtotalRow}`).value = 'סה"כ צוות וחופשיים לא כולל מע"מ';
   for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(subtotalRow, column), style, 'subtotal', style.subtotalFill);
-  worksheet.getCell(`F${subtotalRow}`).value = { formula: dataCount ? `=IF(COUNTIF(F${firstRow}:F${dataLastRow},"")>0,"",SUM(F${firstRow}:F${dataLastRow}))` : '=""' };
+  worksheet.getCell(`F${subtotalRow}`).value = { formula: dataCount ? `=SUM(F${firstRow}:F${dataLastRow})` : '=0' };
   styleHebrewTotalValue(worksheet.getCell(`F${subtotalRow}`), style, 'subtotal', style.subtotalFill);
   worksheet.getCell(`F${subtotalRow}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
   const includingVatRow = subtotalRow + 1;
   worksheet.mergeCells(`B${includingVatRow}:E${includingVatRow}`);
   worksheet.getCell(`B${includingVatRow}`).value = 'סה"כ צוות וחופשיים  כולל מע"מ';
   for (let column = 2; column <= 5; column += 1) styleHebrewTotalLabel(worksheet.getCell(includingVatRow, column), style, 'includingVat', HEBREW_TEMPLATE_STYLE.colors.header);
-  worksheet.getCell(`F${includingVatRow}`).value = { formula: `=IF(F${subtotalRow}="","",F${subtotalRow}*1.18)` };
+  worksheet.getCell(`F${includingVatRow}`).value = { formula: `=F${subtotalRow}*1.18` };
   styleHebrewTotalValue(worksheet.getCell(`F${includingVatRow}`), style, 'includingVat', HEBREW_TEMPLATE_STYLE.colors.header);
   worksheet.getCell(`F${includingVatRow}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
   return { includingVatRow };
@@ -276,8 +274,8 @@ function writeHebrewComplimentaryStaffRow(
   worksheet.getCell(`D${row}`).value = charge?.number.kind === 'numeric' ? Number(charge.number.value) : null;
   worksheet.getCell(`E${row}`).value = complete ? 1 : null;
   worksheet.getCell(`F${row}`).value = complete
-    ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` }
-    : { formula: '=""' };
+    ? { formula: `=C${row}*D${row}*E${row}` }
+    : { formula: '=0' };
   styleHebrewTemplateDetailRow(worksheet, row, style, !complete && Boolean(charge));
   worksheet.getCell(`C${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
   worksheet.getCell(`F${row}`).numFmt = HEBREW_TEMPLATE_STYLE.numberFormats.currency;
@@ -379,13 +377,11 @@ function writeHebrewRoomSection(
   const lastDetailRow = firstDetailRow + night.roomCharges.length - 1;
   const subtotalRow = firstDetailRow + night.roomCharges.length;
   const detailRange = firstDetailRow <= lastDetailRow ? `F${firstDetailRow}:F${lastDetailRow}` : null;
-  const subtotalFormula = detailRange
-    ? `=IF(COUNTIF(${detailRange},"")>0,"",SUM(${detailRange}))`
-    : '=""';
+  const subtotalFormula = detailRange ? `=SUM(${detailRange})` : '=0';
   writeHebrewTotalRow(worksheet, subtotalRow, labels.beforeVat, subtotalFormula, style.subtotalFill, style, 'subtotal');
 
   const includingVatRow = subtotalRow + 1;
-  writeHebrewTotalRow(worksheet, includingVatRow, labels.includingVat, `=IF(F${subtotalRow}="","",F${subtotalRow}*1.18)`, HEBREW_TEMPLATE_STYLE.colors.header, style, 'includingVat');
+  writeHebrewTotalRow(worksheet, includingVatRow, labels.includingVat, `=F${subtotalRow}*1.18`, HEBREW_TEMPLATE_STYLE.colors.header, style, 'includingVat');
 
   return { includingVatRow, nextRow: includingVatRow + 2 };
 }
@@ -479,8 +475,8 @@ function writeHebrewChargeRow(worksheet: ExcelJS.Worksheet, row: number, charge:
   worksheet.getCell(`D${row}`).value = charge.roomCount;
   worksheet.getCell(`E${row}`).value = charge.nights;
   const amountFormula = charge.financialCompleteness === 'complete'
-    ? `=IF(OR(NOT(ISNUMBER(C${row})),C${row}=""),"",D${row}*C${row}*E${row})`
-    : '=""';
+    ? `=D${row}*C${row}*E${row}`
+    : '=0';
   worksheet.getCell(`F${row}`).value = { formula: amountFormula };
   for (let column = 2; column <= 6; column += 1) {
     const cell = worksheet.getCell(row, column);
@@ -551,7 +547,7 @@ async function buildEnglishUsdWorkbook(model: CanonicalExportModel, targetCurren
   }
 
   const combinedRoomRow = row;
-  writeEnglishCombinedRow(worksheet, combinedRoomRow, ` Total Room charges in ${targetCurrency}`, roomTotalRefs.length ? `=IF(OR(${roomTotalRefs.map((ref) => `${ref}=""`).join(',')}),"",SUM(${roomTotalRefs.join(',')}))` : '=""', targetCurrency);
+  writeEnglishCombinedRow(worksheet, combinedRoomRow, ` Total Room charges in ${targetCurrency}`, roomTotalRefs.length ? `=SUM(${roomTotalRefs.join(',')})` : '=0', targetCurrency);
   row = combinedRoomRow + 2;
 
   const staff = writeEnglishStaffSection(worksheet, row, model, targetCurrency);
@@ -562,7 +558,7 @@ async function buildEnglishUsdWorkbook(model: CanonicalExportModel, targetCurren
     `F${staff.porterageRow}`,
   ].filter((reference): reference is string => reference !== null);
   worksheet.getCell(`F${staff.roomsLabelRow}`).value = {
-    formula: `=IF(OR(${finalComponents.map((reference) => `${reference}=""`).join(',')}),"",SUM(${finalComponents.join(',')}))`,
+    formula: `=SUM(${finalComponents.join(',')})`,
   };
   row = staff.nextRow;
   const ancillary = writeEnglishAncillarySection(worksheet, row, model, targetCurrency);
@@ -648,7 +644,7 @@ function writeEnglishHeaderLabel(cell: ExcelJS.Cell, value: string, position: 't
 
 function writeEnglishRoomSection(worksheet: ExcelJS.Worksheet, startRow: number, night: CanonicalNight, targetCurrency: 'USD' | 'ILS'): { totalRow: number; nextRow: number } {
   worksheet.mergeCells(`B${startRow}:F${startRow}`);
-  styleEnglishSectionRow(worksheet, startRow, 'rooms breakdon');
+  styleEnglishSectionRow(worksheet, startRow, englishNightSectionTitle(night.reportDate));
   const headerRow = startRow + 1;
   [`Occupancy`, `no. of rooms`, `cost`, `night`, `Total in ${targetCurrency === 'USD' ? '$' : targetCurrency}`].forEach((value, index) => styleEnglishTableCell(worksheet.getCell(headerRow, index + 2), value, 'header', index === 0, index === 4));
   worksheet.getRow(headerRow).height = ENGLISH_TEMPLATE_STYLE.rows.tableHeader;
@@ -656,14 +652,27 @@ function writeEnglishRoomSection(worksheet: ExcelJS.Worksheet, startRow: number,
   night.roomCharges.forEach((charge, index) => writeEnglishRoomDetail(worksheet, firstDetailRow + index, charge, targetCurrency));
   const detailCount = night.roomCharges.length;
   const totalRow = firstDetailRow + detailCount;
-  writeEnglishSubtotalRow(worksheet, totalRow, ' Total Room charges', detailCount ? `=IF(COUNTIF(F${firstDetailRow}:F${totalRow - 1},"")>0,"",SUM(F${firstDetailRow}:F${totalRow - 1}))` : '=""', targetCurrency);
+  writeEnglishSubtotalRow(worksheet, totalRow, ' Total Room charges', detailCount ? `=SUM(F${firstDetailRow}:F${totalRow - 1})` : '=0', targetCurrency);
   return { totalRow, nextRow: totalRow + 2 };
+}
+
+function englishNightSectionTitle(reportDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(reportDate);
+  if (!match) return 'Room charges · Date unavailable';
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return 'Room charges · Date unavailable';
+  }
+  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
 }
 
 function writeEnglishRoomDetail(worksheet: ExcelJS.Worksheet, row: number, charge: CanonicalRoomChargeRow, targetCurrency: 'USD' | 'ILS') {
   const complete = charge.financialCompleteness === 'complete' && charge.currency === targetCurrency && charge.rate.kind === 'numeric';
   const rate = charge.rate.kind === 'numeric' ? Number(charge.rate.value) : null;
-  styleEnglishDetailRow(worksheet, row, `${roomTypeLabel(charge.bookedRoomType, 'usd')} · ${occupancyLabel(charge.occupancyCategory, 'usd')}`, charge.roomCount, complete ? rate : null, charge.nights, `=IF(OR(NOT(ISNUMBER(D${row})),D${row}=""),"",C${row}*D${row}*E${row})`, currencyNumberFormat(targetCurrency));
+  styleEnglishDetailRow(worksheet, row, `${roomTypeLabel(charge.bookedRoomType, 'usd')} · ${occupancyLabel(charge.occupancyCategory, 'usd')}`, charge.roomCount, complete ? rate : null, charge.nights, `=C${row}*D${row}*E${row}`, currencyNumberFormat(targetCurrency));
 }
 
 function styleEnglishSectionRow(worksheet: ExcelJS.Worksheet, row: number, value: string, fontSize = 14, rowHeight: number = ENGLISH_TEMPLATE_STYLE.rows.section) {
@@ -744,16 +753,16 @@ function writeEnglishStaffSection(worksheet: ExcelJS.Worksheet, startRow: number
   const entries = model.complimentaryStaff ?? [];
   entries.forEach((charge, index) => writeEnglishStaffDetail(worksheet, firstRow + index, charge, targetCurrency));
   const totalRow = firstRow + entries.length;
-  writeEnglishStaffTotal(worksheet, totalRow, entries.length ? `=IF(COUNTIF(F${firstRow}:F${totalRow - 1},"")>0,"",SUM(F${firstRow}:F${totalRow - 1}))` : '=""', targetCurrency);
+  writeEnglishStaffTotal(worksheet, totalRow, entries.length ? `=SUM(F${firstRow}:F${totalRow - 1})` : '=0', targetCurrency);
   const vatRow = totalRow + 2;
   const porterageRow = vatRow + 2;
   writeEnglishUnsupportedStaffRow(worksheet, vatRow, 'vat staff', englishThemeFill(7, 0.5999938962981048), {
-    formula: `=IF(OR(NOT(ISNUMBER(C${vatRow})),NOT(ISNUMBER(D${vatRow})),NOT(ISNUMBER(E${vatRow}))),"",C${vatRow}*D${vatRow}*E${vatRow})`,
+    formula: `=C${vatRow}*D${vatRow}*E${vatRow}`,
     unitValue: 1,
     numberFormat: targetCurrency === 'USD' ? ENGLISH_TEMPLATE_STYLE.numberFormats.usdAccounting : ENGLISH_TEMPLATE_STYLE.numberFormats.ils,
   });
   writeEnglishUnsupportedStaffRow(worksheet, porterageRow, 'Porterage', englishThemeFill(5, 0.7999816888943144), {
-    formula: `=IF(OR(NOT(ISNUMBER(C${porterageRow})),NOT(ISNUMBER(D${porterageRow}))),"",C${porterageRow}*D${porterageRow})`,
+    formula: `=C${porterageRow}*D${porterageRow}`,
     labelOnlyFill: true,
   });
   const roomsLabelRow = porterageRow + 2;
@@ -771,7 +780,7 @@ function writeEnglishStaffDetail(worksheet: ExcelJS.Worksheet, row: number, char
   const complete = charge.completeness === 'complete' && charge.currency === targetCurrency && charge.amount.kind === 'numeric' && charge.number.kind === 'numeric';
   const amount = charge.amount.kind === 'numeric' ? Number(charge.amount.value) : null;
   const number = charge.number.kind === 'numeric' ? Number(charge.number.value) : 0;
-  styleEnglishDetailRow(worksheet, row, charge.type === 'free' ? 'Free' : 'Staff', number, complete ? amount : null, 1, `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})`, currencyNumberFormat(targetCurrency));
+  styleEnglishDetailRow(worksheet, row, charge.type === 'free' ? 'Free' : 'Staff', number, complete ? amount : null, 1, `=C${row}*D${row}*E${row}`, currencyNumberFormat(targetCurrency));
 }
 
 function writeEnglishStaffTotal(worksheet: ExcelJS.Worksheet, row: number, formula: string, targetCurrency: 'USD' | 'ILS') {
@@ -790,7 +799,7 @@ function writeEnglishStaffTotal(worksheet: ExcelJS.Worksheet, row: number, formu
 
 function writeEnglishUnsupportedStaffRow(worksheet: ExcelJS.Worksheet, row: number, label: string, fill: ExcelJS.Fill, options: { formula: string; unitValue?: number; numberFormat?: string; labelOnlyFill?: boolean }) {
   worksheet.getCell(`B${row}`).value = label;
-  styleEnglishDetailRow(worksheet, row, label, 0, null, 1, '=""');
+  styleEnglishDetailRow(worksheet, row, label, 0, null, 1, '=0');
   worksheet.getCell(`B${row}`).value = label;
   worksheet.getCell(`C${row}`).value = null;
   worksheet.getCell(`D${row}`).value = null;
@@ -837,7 +846,7 @@ function writeEnglishAncillarySection(worksheet: ExcelJS.Worksheet, startRow: nu
     }
   }
   const finalRow = firstRow + entries.length;
-  const formula = entries.length ? `=IF(COUNTIF(F${firstRow}:F${finalRow - 1},"")>0,"",SUM(F${firstRow}:F${finalRow - 1}))` : '=""';
+  const formula = entries.length ? `=SUM(F${firstRow}:F${finalRow - 1})` : '=0';
   worksheet.mergeCells(`B${finalRow}:E${finalRow}`);
   worksheet.getCell(`B${finalRow}`).value = 'Total Extrot in Nis';
   worksheet.getCell(`F${finalRow}`).value = { formula };
@@ -858,7 +867,7 @@ function writeEnglishAncillaryDetail(worksheet: ExcelJS.Worksheet, row: number, 
   const price = charge.price.kind === 'numeric' ? Number(charge.price.value) : null;
   const quantity = charge.quantity.kind === 'numeric' ? Number(charge.quantity.value) : null;
   const number = charge.number.kind === 'numeric' ? Number(charge.number.value) : null;
-  styleEnglishDetailRow(worksheet, row, charge.description || 'Unresolved description', complete && quantity !== null ? quantity : 0, complete ? price : null, complete && number !== null ? number : 0, complete ? `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` : '=""');
+  styleEnglishDetailRow(worksheet, row, charge.description || 'Unresolved description', complete && quantity !== null ? quantity : 0, complete ? price : null, complete && number !== null ? number : 0, `=C${row}*D${row}*E${row}`);
   worksheet.getCell(`C${row}`).value = complete ? price : null;
   worksheet.getCell(`D${row}`).value = complete ? quantity : null;
   worksheet.getCell(`E${row}`).value = complete ? number : null;
@@ -970,12 +979,14 @@ async function buildWorkbook(model: CanonicalExportModel, language: ExportLangua
     worksheet.getCell(`B${totalRow}`).value = labels.nightly;
     styleSubtotalLabel(worksheet.getCell(`B${totalRow}`), style);
     const totalColumn = language === 'hebrew' ? 'H' : 'F';
-    const formula = `=IF(COUNTIF(${totalColumn}${firstDetailRow}:${totalColumn}${lastDetailRow},"")>0,"",SUM(${totalColumn}${firstDetailRow}:${totalColumn}${lastDetailRow}))`;
+    const formula = night.roomCharges.length
+      ? `=SUM(${totalColumn}${firstDetailRow}:${totalColumn}${lastDetailRow})`
+      : '=0';
     worksheet.getCell(`${totalColumn}${totalRow}`).value = { formula };
     styleSubtotal(worksheet.getCell(`${totalColumn}${totalRow}`), style);
     if (language === 'hebrew') {
-      const beforeVatFormula = `=IF(COUNTIF(F${firstDetailRow}:F${lastDetailRow},"")>0,"",SUM(F${firstDetailRow}:F${lastDetailRow}))`;
-      const vatFormula = `=IF(COUNTIF(G${firstDetailRow}:G${lastDetailRow},"")>0,"",SUM(G${firstDetailRow}:G${lastDetailRow}))`;
+      const beforeVatFormula = night.roomCharges.length ? `=SUM(F${firstDetailRow}:F${lastDetailRow})` : '=0';
+      const vatFormula = night.roomCharges.length ? `=SUM(G${firstDetailRow}:G${lastDetailRow})` : '=0';
       worksheet.getCell(`F${totalRow}`).value = { formula: beforeVatFormula };
       worksheet.getCell(`G${totalRow}`).value = { formula: vatFormula };
       styleSubtotal(worksheet.getCell(`F${totalRow}`), style);
@@ -991,7 +1002,7 @@ async function buildWorkbook(model: CanonicalExportModel, language: ExportLangua
   styleMergedRow(worksheet, overallRow, 2, lastColumn - 1, styleSection, style);
   const overallColumn = language === 'hebrew' ? 'H' : 'F';
   worksheet.getCell(`${overallColumn}${overallRow}`).value = {
-    formula: `=IF(OR(${detailTotalRefs.map((ref) => `${ref}=""`).join(',')}),"",SUM(${detailTotalRefs.join(',')}))`,
+    formula: detailTotalRefs.length ? `=SUM(${detailTotalRefs.join(',')})` : '=0',
   };
     styleTotalValue(worksheet.getCell(`${overallColumn}${overallRow}`), style);
 
@@ -1049,11 +1060,11 @@ function writeAdditionalChargesSection(
     worksheet.getCell(`E${row}`).value = charge.number.kind === 'numeric' ? Number(charge.number.value) : null;
     const complete = charge.financialCompleteness === 'complete' && charge.currency === targetCurrency;
     if (language === 'hebrew') {
-      worksheet.getCell(`F${row}`).value = complete ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` } : { formula: '=""' };
-      worksheet.getCell(`G${row}`).value = { formula: `=IF(F${row}="","",F${row}*18%)` };
-      worksheet.getCell(`H${row}`).value = { formula: `=IF(F${row}="","",F${row}+G${row})` };
+      worksheet.getCell(`F${row}`).value = { formula: complete ? `=C${row}*D${row}*E${row}` : '=0' };
+      worksheet.getCell(`G${row}`).value = { formula: `=F${row}*18%` };
+      worksheet.getCell(`H${row}`).value = { formula: `=F${row}+G${row}` };
     } else {
-      worksheet.getCell(totalColumn + row).value = complete ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row})),NOT(ISNUMBER(E${row}))),"",C${row}*D${row}*E${row})` } : { formula: '=""' };
+      worksheet.getCell(totalColumn + row).value = { formula: complete ? `=C${row}*D${row}*E${row}` : '=0' };
     }
     for (let column = 2; column <= lastColumn; column += 1) {
       const cell = worksheet.getCell(row, column);
@@ -1074,7 +1085,7 @@ function writeAdditionalChargesSection(
   const totalColumn = language === 'hebrew' ? 'H' : 'F';
   worksheet.getCell(`B${totalRow}`).value = language === 'hebrew' ? 'סה״כ עלויות נוספות כולל מע״מ' : 'Total Additional Charges';
   styleSubtotalLabel(worksheet.getCell(`B${totalRow}`), style);
-  worksheet.getCell(`${totalColumn}${totalRow}`).value = { formula: `=IF(COUNTIF(${totalColumn}${firstRow}:${totalColumn}${lastRow},"")>0,"",SUM(${totalColumn}${firstRow}:${totalColumn}${lastRow}))` };
+  worksheet.getCell(`${totalColumn}${totalRow}`).value = { formula: `=SUM(${totalColumn}${firstRow}:${totalColumn}${lastRow})` };
   styleSubtotal(worksheet.getCell(`${totalColumn}${totalRow}`), style);
   return totalRow;
 }
@@ -1104,7 +1115,7 @@ function writeComplimentaryStaffSection(
   worksheet.mergeCells(`B${totalRow}:E${totalRow}`);
   worksheet.getCell(`B${totalRow}`).value = 'Total Free & Staff';
   styleSubtotalLabel(worksheet.getCell(`B${totalRow}`), style);
-  worksheet.getCell(`F${totalRow}`).value = { formula: `=IF(COUNTIF(F${firstRow}:F${lastRow},"")>0,"",SUM(F${firstRow}:F${lastRow}))` };
+  worksheet.getCell(`F${totalRow}`).value = { formula: `=SUM(F${firstRow}:F${lastRow})` };
   styleSubtotal(worksheet.getCell(`F${totalRow}`), style);
   return totalRow;
 }
@@ -1122,8 +1133,8 @@ function writeComplimentaryStaffExcelRow(
   worksheet.getCell(`D${row}`).value = charge.number.kind === 'numeric' ? Number(charge.number.value) : null;
   worksheet.getCell(`E${row}`).value = charge.currency;
   worksheet.getCell(`F${row}`).value = charge.completeness === 'complete' && charge.currency === targetCurrency
-    ? { formula: `=IF(OR(NOT(ISNUMBER(C${row})),NOT(ISNUMBER(D${row}))),"",C${row}*D${row})` }
-    : { formula: '=""' };
+    ? { formula: `=C${row}*D${row}` }
+    : { formula: '=0' };
   for (let column = 2; column <= 6; column += 1) {
     const cell = worksheet.getCell(row, column);
     cell.font = { name: style.fontName, size: style.bodySize, color: { argb: style.border } };
@@ -1149,11 +1160,11 @@ function writeChargeRow(
   worksheet.getCell(`C${row}`).value = charge.roomCount;
   worksheet.getCell(`D${row}`).value = charge.currency === targetCurrency && charge.rate.kind === 'numeric' ? Number(charge.rate.value) : null;
   worksheet.getCell(`E${row}`).value = charge.nights;
-  const beforeVat = `=IF(OR(NOT(ISNUMBER(D${row})),D${row}=""),"",C${row}*D${row}*E${row})`;
+  const beforeVat = `=C${row}*D${row}*E${row}`;
   if (language === 'hebrew') {
     worksheet.getCell(`F${row}`).value = { formula: beforeVat };
-    worksheet.getCell(`G${row}`).value = { formula: `=IF(F${row}="","",F${row}*18%)` };
-    worksheet.getCell(`H${row}`).value = { formula: `=IF(F${row}="","",F${row}+G${row})` };
+    worksheet.getCell(`G${row}`).value = { formula: `=F${row}*18%` };
+    worksheet.getCell(`H${row}`).value = { formula: `=F${row}+G${row}` };
   } else {
     worksheet.getCell(`F${row}`).value = { formula: beforeVat };
   }

@@ -3,6 +3,7 @@ import type { AdditionalChargeRow } from '../charges/models';
 import type { ComplimentaryStaffRow } from '../charges/complimentaryStaffModels';
 import type { RoomCorrection } from '../reports/roomCorrections';
 import type { ActiveReportDocument } from '../reports/models';
+import type { RecoveryAdjustment } from '../reports/recoveryAdjustments';
 import type { IsoDate } from '../shared/types';
 
 export type ExportLanguage = 'hebrew' | 'usd' | 'english-ils';
@@ -127,6 +128,7 @@ export interface ExportBuildInput {
   pricingRules: PricingRule[];
   additionalCharges?: AdditionalChargeRow[];
   complimentaryStaff?: ComplimentaryStaffRow[];
+  recoveryAdjustments?: RecoveryAdjustment[];
   exportMetadata?: {
     hotelName?: string | null;
     pm?: string | null;

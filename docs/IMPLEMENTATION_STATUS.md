@@ -1,6 +1,6 @@
 # Hotel Breakdown V1 - Implementation Status
 
-Last reviewed: 2026-11-12
+Last reviewed: 2026-11-13
 
 ## Status legend
 
@@ -88,6 +88,7 @@ Last reviewed: 2026-11-12
 - The UI records an acknowledgment timestamp and Folio file hash when Folio warnings are reviewed; Export Preview independently applies the issue severity policy for Draft and Final workbook downloads.
 - Missing Group Report nights identified by Folio coverage produce a reviewable recovery proposal. The proposal copies the nearest preceding selected-group night, allows room exclusion and rate/quantity editing, and requires explicit approval before it contributes to the effective report.
 - Recovery adjustments are persisted separately from original reports. Approved included adjustments are derived into the effective report used by room-night summaries, Folio comparison, and both workbook export paths; original parsed reports remain unchanged.
+- Approved recovery rates and currencies now flow into the Financial Summary and `CanonicalExportModel` through targeted recovery overrides. Recovered nightly totals and overall room totals therefore use the approved values without changing pricing, VAT, or currency-conversion rules.
 - Approved missing-night recoveries can be edited or removed, and duplicate room/date entries are rejected or ignored without changing original source data.
 - A pure `Final Export` validation contract remains available for legacy Folio workflow checks; Export Preview uses structured issues and keeps their severity for review.
 - Export Preview displays all issues; Draft and Final remain available after Folio Comparison is complete, including when `final-blocker` issues are present.

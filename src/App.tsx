@@ -46,6 +46,10 @@ interface UploadItem {
 
 type DateRangeField = 'start' | 'end';
 
+function defaultHotelName(language: ExportLanguage): string {
+  return language === 'hebrew' ? 'אוריינט' : 'orient hotel';
+}
+
 function parseDateInput(value: string): Project['dateRange']['start'] | null {
   const normalized = value.trim().replace(/[/.]/g, '-');
   const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/u.exec(normalized);
@@ -133,7 +137,7 @@ function App() {
       })))
     : [];
   const financialSummary = project?.selectedGroupName
-    ? calculateFinancialSummary(selectedPricingDays, pricingRules)
+    ? calculateFinancialSummary(selectedPricingDays, pricingRules, recoveryAdjustments)
     : null;
   const financialValidation = financialSummary ? validateFinancialSummary(financialSummary) : null;
   const invalidDateInputs = (['start', 'end'] as const).filter((field) => dateInputValues[field].trim() !== '' && !parseDateInput(dateInputValues[field]));
@@ -145,6 +149,7 @@ function App() {
       pricingRules,
       additionalCharges,
       complimentaryStaff,
+      recoveryAdjustments,
       exportMetadata: {
         hotelName: project.hotelName,
         pm: project.pm,
@@ -152,7 +157,7 @@ function App() {
         reportDate: project.reportDateOverride,
       },
     })
-    : null, [effectiveReports, project?.selectedGroupName, project?.hotelName, project?.pm, project?.groupNameOverride, project?.reportDateOverride, corrections, pricingRules, additionalCharges, complimentaryStaff]);
+    : null, [effectiveReports, project?.selectedGroupName, project?.hotelName, project?.pm, project?.groupNameOverride, project?.reportDateOverride, corrections, pricingRules, additionalCharges, complimentaryStaff, recoveryAdjustments]);
   const exportModel = useMemo(() => baseExportModel ? applyRateOverrides(baseExportModel, rateOverrides) : null, [baseExportModel, rateOverrides]);
   const selectedFolioGroupRooms = useMemo<GroupRoomForFolioComparison[]>(() => project?.selectedGroupName
     ? effectiveReports.flatMap((report) => report.groupSnapshots
@@ -377,12 +382,20 @@ function App() {
     setFolioComparisonComplete(false);
     setFolioComparisonResults([]);
     setRecoveryAdjustments([]);
-    setProject(createProject({
-      id: `project-${Date.now()}`,
-      name: 'Untitled Project',
-      now,
-    }));
+    setProject({
+      ...createProject({
+        id: `project-${Date.now()}`,
+        name: 'Untitled Project',
+        now,
+      }),
+      hotelName: defaultHotelName('hebrew'),
+    });
     setView('workspace');
+  }
+
+  function handleExportLanguageChange(language: ExportLanguage) {
+    setExportLanguage(language);
+    updateProjectMetadata('hotelName', defaultHotelName(language));
   }
 
   function handleDateInput(field: DateRangeField, value: string) {
@@ -457,6 +470,15 @@ function App() {
       room: { ...room },
       proposedRate: room.reportedRate,
       approvedRate: null,
+      currency: (() => {
+        const result = matchPricingRule({
+          reportDate: candidate.sourceDate as IsoDate,
+          roomType: room.bookedRoomType ?? room.actualRoomType ?? '',
+          adults: room.adults,
+          children: room.children,
+        }, pricingRules);
+        return result.kind === 'matched' ? result.rule.currency : null;
+      })(),
       included: true,
       status: 'proposed',
       origin: 'previous-night-copy',
@@ -958,13 +980,13 @@ function App() {
             <div className="export-language-switcher">
               <span className="export-language-label">Export template</span>
               <div className="export-language-options" role="group" aria-label="Export template">
-                <button type="button" className="export-language-option" aria-pressed={exportLanguage === 'usd'} onClick={() => setExportLanguage('usd')}>
+                <button type="button" className="export-language-option" aria-pressed={exportLanguage === 'usd'} onClick={() => handleExportLanguageChange('usd')}>
                   English / USD
                 </button>
-                <button type="button" className="export-language-option" aria-pressed={exportLanguage === 'english-ils'} onClick={() => setExportLanguage('english-ils')}>
+                <button type="button" className="export-language-option" aria-pressed={exportLanguage === 'english-ils'} onClick={() => handleExportLanguageChange('english-ils')}>
                   English / ILS
                 </button>
-                <button type="button" className="export-language-option" aria-pressed={exportLanguage === 'hebrew'} onClick={() => setExportLanguage('hebrew')}>
+                <button type="button" className="export-language-option" aria-pressed={exportLanguage === 'hebrew'} onClick={() => handleExportLanguageChange('hebrew')}>
                   עברית / ILS
                 </button>
               </div>

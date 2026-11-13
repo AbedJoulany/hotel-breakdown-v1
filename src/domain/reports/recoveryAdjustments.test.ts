@@ -40,6 +40,7 @@ const adjustment = (overrides: Partial<RecoveryAdjustment> = {}): RecoveryAdjust
   room: room('0826', '1030'),
   proposedRate: '1030',
   approvedRate: '1030',
+  currency: 'ILS',
   included: true,
   status: 'approved',
   origin: 'previous-night-copy',

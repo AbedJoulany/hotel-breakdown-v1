@@ -1,6 +1,6 @@
 # Hotel Breakdown V1 - Architecture
 
-Last reviewed: 2026-11-12
+Last reviewed: 2026-11-13
 
 ## Status legend
 
@@ -142,6 +142,7 @@ Implemented invariants:
 - Exact duplicate reports are ignored.
 - An invalid candidate cannot replace a valid active report.
 - Recovery adjustments never mutate original report objects. Only approved included adjustments are applied, and an existing room number on the same target date is not duplicated.
+- Approved recovery rate and currency overrides are consumed by `calculateFinancialSummary` and `buildExportData` for the matching report date and room number. Existing pricing rules remain the fallback for original rooms, and the existing `FinancialCalculator` continues to calculate export amounts from the canonical model.
 
 Basic financial calculation is implemented with integer minor units, two-decimal ILS/USD totals, separate currencies, and per-room-night rounding. Hebrew VAT is applied to room charges, approved Additional Charges, and Complimentary/Staff rows in the Hebrew export; Hebrew Complimentary/Staff totals are included in the Hebrew overall total. English export supports separate `USD` and `ILS` template choices, applies no VAT, and does not convert between currencies. The pure Final Export gate is implemented. Pricing conflict and Missing Price results are connected to the displayed financial summary. Folio comparison accepts normalized entries, and `src/infrastructure/pdf/parseFolio.ts` maps the inspected layout into those entries plus separate ILS/USD summary totals while excluding account rows; the UI aggregates comparison by room and guest across dates, and the pure Final Export gate combines financial blockers with unacknowledged Folio warnings.
 

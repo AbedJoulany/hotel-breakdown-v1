@@ -1,6 +1,7 @@
 import type { ActiveReportDocument, DailyGroupSnapshot, RoomRecord } from './models';
 import { groupMatchKey } from './groupMatch';
 import type { IsoDate } from '../shared/types';
+import type { SupportedCurrency } from '../pricing/pricingRules';
 
 export type RecoveryAdjustmentStatus = 'proposed' | 'approved';
 
@@ -12,6 +13,7 @@ export interface RecoveryAdjustment {
   room: RoomRecord;
   proposedRate: string | null;
   approvedRate: string | null;
+  currency: SupportedCurrency | null;
   included: boolean;
   status: RecoveryAdjustmentStatus;
   origin: 'previous-night-copy';

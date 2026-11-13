@@ -215,7 +215,15 @@ describe('Home', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Excel Export' }));
     expect(screen.getByLabelText('PM / Confirmation number')).toHaveValue('161240141');
-    fireEvent.change(screen.getByLabelText('Hotel name'), { target: { value: 'Orient Jerusalem' } });
+    expect(screen.getByLabelText('Hotel name')).toHaveValue('אוריינט');
+    fireEvent.click(screen.getByRole('button', { name: 'English / USD' }));
+    expect(screen.getByLabelText('Hotel name')).toHaveValue('orient hotel');
+    fireEvent.change(screen.getByLabelText('Hotel name'), { target: { value: 'Custom Hotel' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Additional Charges' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Excel Export' }));
+    expect(screen.getByLabelText('Hotel name')).toHaveValue('Custom Hotel');
+    fireEvent.click(screen.getByRole('button', { name: 'עברית / ILS' }));
+    expect(screen.getByLabelText('Hotel name')).toHaveValue('אוריינט');
     fireEvent.change(screen.getByLabelText('Group name for export'), { target: { value: 'Edited Group' } });
     fireEvent.change(screen.getByLabelText('Export date override'), { target: { value: '2026-10-25' } });
     fireEvent.click(screen.getByRole('button', { name: 'Folio Comparison' }));
