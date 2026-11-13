@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { summarizeFolioStayComparison } from '../domain/folio/compareFolio';
-import type { FolioStayComparisonResult, GroupRoomForFolioComparison } from '../domain/folio/models';
+import type { FolioStayComparisonResult, FolioComparisonStatus, GroupRoomForFolioComparison } from '../domain/folio/models';
 import type { FolioWarningAcknowledgement } from '../infrastructure/storage/workspaceStore';
 import { hashArrayBuffer } from '../infrastructure/files/hashArrayBuffer';
 import { extractPdfTextPages } from '../infrastructure/pdf/pdfTextExtractor';
@@ -11,6 +11,7 @@ interface FolioComparisonPanelProps {
   warningAcknowledgement: FolioWarningAcknowledgement | null;
   onFolioLoaded: (fileHash: string | null) => void;
   onConfirmationNumberDetected: (confirmationNumber: string | null) => void;
+  onComparisonResults: (results: FolioStayComparisonResult[]) => void;
   onWarningAcknowledged: () => void;
 }
 
@@ -19,6 +20,7 @@ function FolioComparisonPanel({
   warningAcknowledgement,
   onFolioLoaded,
   onConfirmationNumberDetected,
+  onComparisonResults,
   onWarningAcknowledged,
 }: FolioComparisonPanelProps) {
   const [fileName, setFileName] = useState<string | null>(null);
@@ -28,6 +30,9 @@ function FolioComparisonPanel({
   const comparison = useMemo(() => folio
     ? summarizeFolioStayComparison(groupRooms, folio.entries, folio.currency)
     : [], [folio, groupRooms]);
+  useEffect(() => {
+    onComparisonResults(comparison);
+  }, [comparison, onComparisonResults]);
 
   async function handleUpload(file: File | undefined) {
     if (!file) return;
@@ -132,17 +137,22 @@ function FolioComparisonPanel({
 }
 
 function FolioComparisonRow({ result }: { result: FolioStayComparisonResult }) {
-  const statusText = {
+  const statusText: Record<FolioComparisonStatus, string>[FolioComparisonStatus] = {
     matched: 'Matched',
     'amount-mismatch': 'Warning: amount mismatch',
     'missing-in-folio': 'Missing in Folio',
     'missing-in-group': 'Missing in Group Report',
+    'incomplete-group-report': 'Incomplete Group Report — Missing Night',
     'data-missing': 'Data missing',
   }[result.status];
 
   return (
     <div className={`folio-comparison-row ${result.status}`}>
-      <span>{result.roomNumber} · {result.guestName || 'Unnamed guest'}</span>
+      <span>
+        {result.roomNumber} · {result.guestName || 'Unnamed guest'}
+        {result.missingGroupReportDates?.map((date) => <small key={date}>Missing Group Report night: {date}</small>)}
+        {result.coverageWarning && <small>Possible incomplete Group Report coverage</small>}
+      </span>
       <span>{result.groupNightCount}</span>
       <span>{result.folioNightCount ?? 'Not stated'}</span>
       <span>{result.folioEntryCount}</span>

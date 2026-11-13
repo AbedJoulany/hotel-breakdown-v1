@@ -98,4 +98,48 @@ describe('compareFolioToGroup', () => {
     );
     expect(result[0].status).toBe('amount-mismatch');
   });
+
+  it('identifies a confirmed missing Group Report night from stay dates and Folio coverage', () => {
+    const result = summarizeFolioStayComparison(
+      [{ reportDate: '2026-10-24', roomNumber: '0524', guestName: 'Guest A', reportedRate: '1030.00', fromDate: '2026-10-24', toDate: '2026-10-26' }],
+      [
+        { ...folioEntries[0], roomNumber: '0524', guestName: 'Guest A', transactionDate: '2026-10-24', charges: '1030.00' },
+        { ...folioEntries[0], roomNumber: '0524', guestName: 'Guest A', transactionDate: '2026-10-25', charges: '1030.00' },
+      ],
+      'ILS',
+    );
+
+    expect(result[0]).toMatchObject({
+      groupNightCount: 1,
+      groupAmount: '1030.00',
+      folioAmount: '2060.00',
+      status: 'incomplete-group-report',
+      missingGroupReportDates: ['2026-10-25'],
+    });
+  });
+
+  it('does not call an amount mismatch a missing night without reliable stay dates', () => {
+    const result = summarizeFolioStayComparison(
+      [{ reportDate: '2026-10-24', roomNumber: '0524', guestName: 'Guest A', reportedRate: '1030.00' }],
+      [{ ...folioEntries[0], roomNumber: '0524', guestName: 'Guest A', transactionDate: '2026-10-24', charges: '2060.00' }],
+      'ILS',
+    );
+
+    expect(result[0].status).toBe('amount-mismatch');
+    expect(result[0].missingGroupReportDates).toBeUndefined();
+  });
+
+  it('preserves a genuine mismatch when expected coverage is complete', () => {
+    const result = summarizeFolioStayComparison(
+      [
+        { reportDate: '2026-10-24', roomNumber: '0524', guestName: 'Guest A', reportedRate: '1030.00', fromDate: '2026-10-24', toDate: '2026-10-26' },
+        { reportDate: '2026-10-25', roomNumber: '0524', guestName: 'Guest A', reportedRate: '1030.00', fromDate: '2026-10-24', toDate: '2026-10-26' },
+      ],
+      [{ ...folioEntries[0], roomNumber: '0524', guestName: 'Guest A', transactionDate: '2026-10-24', charges: '2100.00' }],
+      'ILS',
+    );
+
+    expect(result[0].status).toBe('amount-mismatch');
+    expect(result[0].missingGroupReportDates).toBeUndefined();
+  });
 });

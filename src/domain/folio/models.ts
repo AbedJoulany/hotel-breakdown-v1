@@ -17,6 +17,8 @@ export interface GroupRoomForFolioComparison {
   roomNumber: string;
   guestName: string;
   reportedRate: string | null;
+  fromDate?: IsoDate | null;
+  toDate?: IsoDate | null;
 }
 
 export type FolioComparisonStatus =
@@ -24,6 +26,7 @@ export type FolioComparisonStatus =
   | 'amount-mismatch'
   | 'missing-in-folio'
   | 'missing-in-group'
+  | 'incomplete-group-report'
   | 'data-missing';
 
 export interface FolioComparisonResult {
@@ -37,6 +40,8 @@ export interface FolioComparisonResult {
   folioAmount: string | null;
   currency: SupportedCurrency | null;
   status: FolioComparisonStatus;
+  missingGroupReportDates?: IsoDate[];
+  coverageWarning?: 'possible-incomplete-coverage';
 }
 
 export interface FolioStayComparisonResult {
@@ -49,4 +54,6 @@ export interface FolioStayComparisonResult {
   folioAmount: string | null;
   currency: SupportedCurrency | null;
   status: FolioComparisonStatus;
+  missingGroupReportDates?: IsoDate[];
+  coverageWarning?: 'possible-incomplete-coverage';
 }

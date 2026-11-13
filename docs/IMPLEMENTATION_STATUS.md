@@ -1,6 +1,6 @@
 # Hotel Breakdown V1 - Implementation Status
 
-Last reviewed: 2026-11-11
+Last reviewed: 2026-11-12
 
 ## Status legend
 
@@ -86,6 +86,9 @@ Last reviewed: 2026-11-11
 - Folio amount differences are displayed as review warnings and are not connected to the blocking `Financial Validation` gate.
 - Folio amount comparison uses the approved `0.01` minor-unit tolerance for ILS and USD.
 - The UI records an acknowledgment timestamp and Folio file hash when Folio warnings are reviewed; Export Preview independently applies the issue severity policy for Draft and Final workbook downloads.
+- Missing Group Report nights identified by Folio coverage produce a reviewable recovery proposal. The proposal copies the nearest preceding selected-group night, allows room exclusion and rate/quantity editing, and requires explicit approval before it contributes to the effective report.
+- Recovery adjustments are persisted separately from original reports. Approved included adjustments are derived into the effective report used by room-night summaries, Folio comparison, and both workbook export paths; original parsed reports remain unchanged.
+- Approved missing-night recoveries can be edited or removed, and duplicate room/date entries are rejected or ignored without changing original source data.
 - A pure `Final Export` validation contract remains available for legacy Folio workflow checks; Export Preview uses structured issues and keeps their severity for review.
 - Export Preview displays all issues; Draft and Final remain available after Folio Comparison is complete, including when `final-blocker` issues are present.
 - `Folio nights` is shown as `Not stated` for the inspected layouts because they do not provide a per-room night quantity; account-level Arrival/Departure is not applied to individual rooms.
@@ -123,8 +126,8 @@ npm run build
 
 Observed result:
 
-- 25 test files passed.
-- 116 tests passed.
+- 28 test files passed.
+- 130 tests passed.
 - Production build passed.
 
 - PDF.js may emit `standardFontDataUrl` warnings during tests; these did not fail the test run.
@@ -155,6 +158,7 @@ These items are recommendations, not completed functionality.
 - Complimentary/Staff workbook calculations, VAT, and room-charge/discount treatment.
 - Final persistence schema and backup file format.
 - Whether and how duplicate-room conflicts should be corrected in the UI.
+- Recovery behavior when no preceding source night exists, and broader recovery conflict presentation beyond the current room/date validation.
 - Remaining manual-field behavior in the reference templates is out of scope because generated workbooks are built from scratch.
 
 ## Next proposed task

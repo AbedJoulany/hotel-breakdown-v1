@@ -233,6 +233,15 @@ No additional proposed decision is being recorded in this file. New recommendati
 - **Folio mapping:** When PM is empty, the inspected Folio `Confirmation No.` may populate it. The user can edit PM manually; a later Folio upload does not overwrite a non-empty manual value.
 - **Output mapping:** PM is written to Hebrew `הזמנה` and English `PM`. Hotel name, group name, and display date are written to the corresponding generated workbook header fields.
 
+### DEC-024 - Missing Group Report night recovery
+
+- **Status:** Approved; implemented
+- **Decision:** When Folio coverage reliably identifies a missing Group Report night, the application may propose copying the nearest preceding selected-group night into a separate recovery review. Recovery rows may be excluded or edited and contribute to the effective report only after explicit approval.
+- **Preservation:** Original parsed Group Report data remains unchanged. Recovery adjustments retain target date, source date, room identity, proposed and approved rates, inclusion, approval status, and recovery origin.
+- **Scope:** Approved recovery rows participate in room-night summaries, Folio comparison, and Hebrew/English workbook export through the effective report collection. No new pricing, VAT, or currency-conversion rules are introduced.
+- **Conflict behavior:** Duplicate room/date entries are rejected during review or ignored during effective application; existing discrepancies remain visible.
+- **Evidence:** `src/domain/reports/recoveryAdjustments.ts`, `src/components/RecoveryReviewPanel.tsx`, and `src/App.tsx`.
+
 ## Unresolved decisions
 
 ### DEC-U002 - Final Export UI and workbook implementation

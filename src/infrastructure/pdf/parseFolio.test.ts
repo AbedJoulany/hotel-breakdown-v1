@@ -4,6 +4,18 @@ import { parseFolio } from './parseFolio';
 import { extractPdfTextPages } from './pdfTextExtractor';
 
 describe('parseFolio', () => {
+  it('parses the Alaska Folio and exposes the 0825 guest entry', async () => {
+    const pdf = await readFile('group in ils/alaska folio.pdf');
+    const folio = parseFolio(await extractPdfTextPages(pdf.buffer.slice(pdf.byteOffset, pdf.byteOffset + pdf.byteLength)));
+
+    expect(folio.currency).toBe('ILS');
+    expect(folio.confirmationNumber).toBeTruthy();
+    expect(folio.entries.find((entry) => entry.roomNumber === '0825')).toMatchObject({
+      guestName: 'Laura Ann Martinson McDonn',
+      transactionDate: '2026-11-02',
+    });
+  });
+
   it('parses room transactions from the inspected Folio and excludes the account row', async () => {
     const pdf = await readFile('group in ils/by name and room number.pdf');
     const pages = await extractPdfTextPages(pdf.buffer.slice(pdf.byteOffset, pdf.byteOffset + pdf.byteLength));

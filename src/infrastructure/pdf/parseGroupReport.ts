@@ -49,7 +49,11 @@ function parsePageGroups(page: PdfTextPage, reportDate: string): DailyGroupSnaps
       .filter((item) => item.y > header.y + 15 && item.y < nextHeaderY - 3)
       .sort((a, b) => a.y - b.y);
 
-    const rooms = roomItems.map((roomItem) => parseRoomRow(page.items, roomItem));
+    const rooms = roomItems.map((roomItem, roomIndex) => parseRoomRow(
+      page.items,
+      roomItem,
+      roomItems[roomIndex + 1]?.y ?? nextHeaderY,
+    ));
 
     return {
       reportId: `page-${page.pageNumber}-${Math.round(header.y)}`,
@@ -60,14 +64,14 @@ function parsePageGroups(page: PdfTextPage, reportDate: string): DailyGroupSnaps
   });
 }
 
-function parseRoomRow(items: PdfTextItem[], roomItem: PdfTextItem): RoomRecord {
+function parseRoomRow(items: PdfTextItem[], roomItem: PdfTextItem, nextRoomY: number): RoomRecord {
   const rowItems = items.filter(
-    (item) => item.y >= roomItem.y - 1 && item.y <= roomItem.y + 11,
+    (item) => item.y >= roomItem.y - 1 && item.y < nextRoomY - 1,
   );
 
   return normalizeGroupReportRow({
     room: roomItem.text,
-    guest: textAt(rowItems, 68, 60, 230) ?? '',
+    guest: textColumn(rowItems, 60, 230) ?? '',
     reservationNumber: textAt(rowItems, 234, 230, 280, true),
     rm: textAt(rowItems, 284, 278, 308),
     upg: textAt(rowItems, 311, 306, 337),
@@ -81,6 +85,15 @@ function parseRoomRow(items: PdfTextItem[], roomItem: PdfTextItem): RoomRecord {
     rateCode: textAt(rowItems, 671, 667, 724),
     rate: textAt(rowItems, 726, 722, 790),
   });
+}
+
+function textColumn(items: PdfTextItem[], minX: number, maxX: number): string | undefined {
+  const matches = items
+    .filter((item) => item.x >= minX && item.x < maxX)
+    .sort((a, b) => a.y - b.y || a.x - b.x)
+    .map((item) => item.text.trim())
+    .filter(Boolean);
+  return matches.length ? matches.join(' ') : undefined;
 }
 
 function textAt(

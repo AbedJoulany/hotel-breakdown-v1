@@ -5,6 +5,47 @@ import { extractPdfTextPages } from './pdfTextExtractor';
 import { findRoomConflicts, summarizeRoomOccupancy } from '../../domain/reports/roomOccupancy';
 
 describe('parseGroupReport', () => {
+  it.each([
+    ['group in ils/group report 1.11.pdf', '2026-11-01'],
+    ['group in ils/group report 31.10.pdf', '2026-10-31'],
+  ])('parses Alaska reports and reconstructs room 0825 guest name: %s', async (fileName, expectedDate) => {
+    const pdf = await readFile(fileName);
+    const report = parseGroupReport(await extractPdfTextPages(pdf.buffer.slice(pdf.byteOffset, pdf.byteOffset + pdf.byteLength)));
+    const alaska = report.groups.find((group) => group.groupName === 'Alaska Chamber of Commerce,Ort,BB');
+    const room = alaska?.rooms.find((entry) => entry.roomNumber === '0825');
+
+    expect(report.reportDate).toBe(expectedDate);
+    expect(alaska).toBeDefined();
+    expect(room?.guestName).toBe('McDonnell Laura Ann Martinson');
+  });
+
+  it('reconstructs a multiline guest name without crossing into the next room', () => {
+    const report = parseGroupReport([{
+      pageNumber: 1,
+      width: 800,
+      height: 800,
+      items: [
+        { text: '25 OCT 2026', x: 10, y: 10, width: 80, height: 10 },
+        { text: 'Group Name:', x: 10, y: 40, width: 70, height: 10 },
+        { text: 'Multiline Group', x: 80, y: 40, width: 100, height: 10 },
+        { text: '0825', x: 36, y: 80, width: 30, height: 10 },
+        { text: 'McDonnell Laura Ann', x: 68, y: 80, width: 120, height: 10 },
+        { text: 'Martinson', x: 68, y: 90, width: 70, height: 10 },
+        { text: 'STR', x: 310, y: 80, width: 20, height: 10 },
+        { text: '1', x: 540, y: 80, width: 10, height: 10 },
+        { text: '0', x: 576, y: 80, width: 10, height: 10 },
+        { text: '0', x: 612, y: 80, width: 10, height: 10 },
+        { text: '1', x: 644, y: 80, width: 10, height: 10 },
+        { text: '0830', x: 36, y: 120, width: 30, height: 10 },
+        { text: 'Next Guest', x: 68, y: 120, width: 80, height: 10 },
+      ],
+    }]);
+
+    expect(report.groups[0]?.rooms).toHaveLength(2);
+    expect(report.groups[0]?.rooms[0]?.guestName).toBe('McDonnell Laura Ann Martinson');
+    expect(report.groups[0]?.rooms[1]?.guestName).toBe('Next Guest');
+  });
+
   it('parses groups and room rows from the 24 October report', async () => {
     const pdf = await readFile('group in ils/24.10.26.pdf');
     const pages = await extractPdfTextPages(pdf.buffer.slice(pdf.byteOffset, pdf.byteOffset + pdf.byteLength));

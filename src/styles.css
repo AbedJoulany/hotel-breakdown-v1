@@ -936,6 +936,78 @@ h1 {
   padding: 1rem;
 }
 
+.recovery-panel {
+  background: #fffaf0;
+  border: 1px solid #e8cf9f;
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.recovery-panel-heading h3,
+.recovery-panel-heading p {
+  margin: 0;
+}
+
+.recovery-card {
+  background: #fffdf8;
+  border: 1px solid #e4ddce;
+  border-radius: 0.65rem;
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+}
+
+.recovery-card-heading,
+.recovery-card-actions,
+.recovery-review-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: space-between;
+}
+
+.recovery-card-heading > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.recovery-table {
+  overflow-x: auto;
+}
+
+.recovery-table-row {
+  align-items: center;
+  border-bottom: 1px solid #e4ddce;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: 4.5rem 4rem minmax(11rem, 1.5fr) minmax(6rem, 1fr) 7rem 6rem 7rem;
+  min-width: 47rem;
+  padding: 0.55rem 0;
+}
+
+.recovery-table-header {
+  color: #6b5a44;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.recovery-table-row input[type='number'] {
+  border: 1px solid #d2c6b2;
+  border-radius: 0.4rem;
+  min-width: 0;
+  padding: 0.4rem;
+  width: 100%;
+}
+
+.recovery-approved {
+  color: #2f6657;
+  font-weight: 800;
+}
+
 .folio-panel-heading {
   align-items: center;
   display: flex;
@@ -1033,14 +1105,27 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+.folio-comparison-row small {
+  color: #8a3e2b;
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+}
+
 .folio-comparison-row.matched strong {
   color: #2f6657;
 }
 
 .folio-comparison-row.missing-in-folio strong,
 .folio-comparison-row.missing-in-group strong,
+.folio-comparison-row.incomplete-group-report strong,
 .folio-comparison-row.data-missing strong {
   color: #8a3e2b;
+}
+
+.folio-comparison-row.incomplete-group-report {
+  background: #fff4e5;
+  border-color: #e4b97c;
 }
 
 .folio-comparison-row.amount-mismatch {
